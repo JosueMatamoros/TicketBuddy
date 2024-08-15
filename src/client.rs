@@ -1,11 +1,11 @@
 // bin/client.rs
 
 // Dependencies:
+use futures_util::{SinkExt, StreamExt};
+use std::io::{self, Write};
 use tokio_tungstenite::connect_async;
 use tungstenite::protocol::Message;
 use url::Url;
-use futures_util::{SinkExt};
-use std::io::{self, Write};
 
 #[tokio::main]
 async fn main() {
@@ -26,7 +26,9 @@ async fn main() {
     // Get the user's input
     let mut input = String::new();
     io::stdout().flush().unwrap(); // Flush the buffer to show the message
-    io::stdin().read_line(&mut input).expect("Failed to read line");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
 
     // Match the user's input to the seat class
     let selected_class = match input.trim() {
@@ -41,10 +43,66 @@ async fn main() {
 
     // Send the selected seat class to the server
     let message = Message::Text(selected_class.to_string());
-    ws_stream.send(message).await.expect("Failed to send message");
+    ws_stream
+        .send(message)
+        .await
+        .expect("Failed to send message");
 
-    println!("Sent: {}", selected_class);
+    // Wait for the server to send the available sections
+    if let Some(Ok(Message::Text(response))) = ws_stream.next().await {
+        println!("{}", response);
+    } else {
+        println!("Failed to receive message");
+    }
+
+    let mut input = String::new();
+    io::stdout().flush().unwrap(); // Flush the buffer to show the message
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+
+    // lamar a la fucnion
+    let selected_section = match_section(selected_class, input.trim());
+
+    // enviarla
+    let message = Message::Text(selected_section.to_string());
+    ws_stream
+        .send(message)
+        .await
+        .expect("Failed to send message");
 
     // Close the connection
-    ws_stream.close(None).await.expect("Failed to close connection");
+    ws_stream
+        .close(None)
+        .await
+        .expect("Failed to close connection");
+}
+
+fn match_section(class: &str, section: &str) -> &'static str {
+    match class {
+        "FirstClass" => match section {
+            "1" => "A1",
+            "2" => "B1",
+            "3" => "C1",
+            _ => "A1",
+        },
+        "BusinessClass" => match section {
+            "1" => "A2",
+            "2" => "B2",
+            "3" => "C2",
+            "4" => "A3",
+            "5" => "B3",
+            "6" => "C3",
+            _ => "A2",
+        },
+        "EconomyClass" => match section {
+            "1" => "D",
+            "2" => "E",
+            "3" => "F",
+            "4" => "G",
+            "5" => "H",
+            _ => "D",
+        },
+        _ => "EconomyClass",
+    }
 }
