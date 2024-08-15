@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.17"
+tungstenite = "0.17"
+futures-util = "0.3"
+url = "2.5.2"
+
+[[bin]]
+name = "client"
+path = "src/client.rs"

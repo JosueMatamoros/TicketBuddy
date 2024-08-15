@@ -1,10 +1,15 @@
 mod seat_manager;
+mod socket_manager;
+mod client;
 
-use seat_manager::{Seat, Section, create_seats};
+use tokio::runtime::Runtime;
+use socket_manager::start_socket_server;
+
 fn main() {
-    let seats = create_seats();
-    let count = seats.len();
+    let rt = Runtime::new().unwrap();
+    rt.block_on(async {
+        start_socket_server().await;
 
+    });
 
-    println!("Total seats: {}", count);
 }
