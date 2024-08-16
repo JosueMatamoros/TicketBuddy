@@ -8,7 +8,7 @@ pub struct Seat {
     pub row: u32,
     pub visibility: f32,
     pub price: f32,
-    pub booked: bool,
+    pub booked: char, // B = Booked, R = Reserved, F = Free
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
@@ -64,10 +64,68 @@ fn add_seats(
                         row,
                         visibility,
                         price,
-                        booked: false,
+                        booked: 'F',
                     },
                 );
             }
         }
     }
+}
+
+pub fn find_seats_by_section(
+    seats_amount: u32,
+    section: Section,
+    seats: &HashMap<(Section, u32, u32), Seat>,
+) -> Vec<(Section, u32, u32)> {
+    let mut available_seats = Vec::new();
+    let mut current_row = 1;
+
+    // Encuentra la cantidad máxima de filas y asientos por fila para la sección dada
+    let max_row = seats
+        .keys()
+        .filter(|&&(sec, _, _)| sec == section)
+        .map(|&(_, row, _)| row)
+        .max()
+        .unwrap_or(0);
+
+    while available_seats.len() < seats_amount as usize && current_row <= max_row {
+        let max_number = seats
+            .keys()
+            .filter(|&&(sec, row, _)| sec == section && row == current_row)
+            .map(|&(_, _, number)| number)
+            .max()
+            .unwrap_or(0);
+
+        let mut row_seats = Vec::new();
+
+        for number in 1..=max_number {
+            if let Some(seat) = seats.get(&(section, current_row, number)) {
+                if seat.booked == 'F' {
+                    row_seats.push((section, current_row, number));
+                    if row_seats.len() >= seats_amount as usize {
+                        break;
+                    }
+                } else {
+                    row_seats.clear();
+                }
+            }
+        }
+
+        available_seats.extend(row_seats);
+
+        if available_seats.len() >= seats_amount as usize {
+            break;
+        }
+
+        current_row += 1;
+    }
+
+    available_seats.truncate(seats_amount as usize);
+    available_seats
+}
+
+
+pub fn test () {
+    let available_seats = find_seats_by_section(3, Section::A1, &create_seats());
+    println!("Available seats: {:?}", available_seats);
 }

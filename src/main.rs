@@ -10,4 +10,6 @@ fn main() {
     rt.block_on(async {
         start_socket_server().await;
     });
+
+    //seat_manager::test();
 }

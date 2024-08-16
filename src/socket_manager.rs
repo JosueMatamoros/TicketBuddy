@@ -9,7 +9,7 @@ pub async fn start_socket_server() {
     let addr = "127.0.0.1:8080";
     let listener = TcpListener::bind(&addr).await.expect("Failed to bind");
 
-    println!("WebSocket server started at: {}", addr);
+    println!("WebSocket server started at: \n{}", addr);
 
     // Loop to accept incoming connections
     loop {
