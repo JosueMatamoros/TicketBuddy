@@ -10,6 +10,6 @@ fn main() {
     rt.block_on(async {
         start_socket_server().await;
     });
-
+    println!("Hello, world!");
     //seat_manager::test();
 }
