@@ -110,22 +110,35 @@ pub fn find_seats_by_section(
                 }
             }
         }
-
         available_seats.extend(row_seats);
 
         if available_seats.len() >= seats_amount as usize {
             break;
+        }else {
+            available_seats.clear();
         }
 
         current_row += 1;
+
     }
 
     available_seats.truncate(seats_amount as usize);
     available_seats
 }
 
+fn mark_seat_as(state:char, seats: &mut HashMap<(Section, u32, u32), Seat>, section: Section, row: u32, number: u32) {
+    if let Some(seat) = seats.get_mut(&(section, row, number)) {
+        seat.booked = state;
+    }
+}
 
-pub fn test () {
-    let available_seats = find_seats_by_section(3, Section::A1, &create_seats());
-    println!("Available seats: {:?}", available_seats);
+pub fn test (seat: HashMap<(Section, u32, u32), Seat>) {
+    let mut seats = seat;
+    let section = Section::A1;
+    mark_seat_as('B', &mut seats, section, 1, 2);
+    mark_seat_as('B', &mut seats, section, 1, 4);
+    mark_seat_as('B', &mut seats, section, 2, 3);
+
+    let available_seats = find_seats_by_section(3, section, &seats);
+    println!("{:?}", available_seats);
 }
