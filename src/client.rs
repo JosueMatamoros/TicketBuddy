@@ -21,25 +21,25 @@ async fn main() {
 
     // Show the user the available seat classes
     println!("Please select a seat class:");
-    println!("1: FirstClass");
-    println!("2: BusinessClass");
-    println!("3: EconomyClass");
+    println!("1: FirstClass (Max 5 seats)");
+    println!("2: BusinessClass (Max 6 seats)");
+    println!("3: EconomyClass (Max 8 seats)");
 
     // Get the user's input for seat class
     let mut input = String::new();
-    io::stdout().flush().unwrap(); // Flush the buffer to show the message
+    io::stdout().flush().unwrap();
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
 
-    // Match the user's input to the seat class
-    let selected_class = match input.trim() {
-        "1" => "FirstClass",
-        "2" => "BusinessClass",
-        "3" => "EconomyClass",
+    // Match the user's input to the seat class and determine the maximum seats allowed
+    let (selected_class, max_seats) = match input.trim() {
+        "1" => ("FirstClass", 5),
+        "2" => ("BusinessClass", 6),
+        "3" => ("EconomyClass", 8),
         _ => {
             println!("Invalid selection. Defaulting to EconomyClass.");
-            "EconomyClass"
+            ("EconomyClass", 8)
         }
     };
 
@@ -56,9 +56,9 @@ async fn main() {
         println!("Failed to receive message");
     }
 
-    // Get the user's input for seat section
+    // Ensure this message is shown only once
     let mut input = String::new();
-    io::stdout().flush().unwrap(); // Flush the buffer to show the message
+    io::stdout().flush().unwrap();
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
@@ -66,13 +66,43 @@ async fn main() {
     // Match the selected section based on the selected class
     let selected_section = match_section(selected_class, input.trim());
 
-    // Send the selected section to the server
+    // Ask the user how many seats they want to reserve, constrained by the max allowed
+    let num_seats = loop {
+        println!("You can reserve up to {} seats in this section. How many seats would you like to reserve?", max_seats);
+        let mut input = String::new();
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut input).expect("Failed to read line");
+
+        match input.trim().parse::<u32>() {
+            Ok(n) if n <= max_seats => break n,
+            _ => println!("Invalid number of seats. Please enter a number between 1 and {}", max_seats),
+        }
+    };
+
+    // Send the selected section and the number of seats to the server
+    let message = Message::Text(format!("{};{}", selected_section, num_seats));
     ws_stream
-        .send(Message::Text(selected_section.to_string()))
+        .send(message)
         .await
         .expect("Failed to send message");
 
-    // You can add further code here to handle server response if needed
+    // Simulate receiving seat suggestions from the server with hardcoded data
+    println!("Suggested seats: Section {}, Seats: 1, 2, 3", selected_section);
+
+    println!("Do you want to accept this suggestion? (yes/no)");
+    let mut input = String::new();
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+
+    if input.trim().eq_ignore_ascii_case("yes") {
+        ws_stream
+            .send(Message::Text("ACCEPT".to_string()))
+            .await
+            .expect("Failed to send acceptance message");
+        println!("Reservation accepted.");
+    } else {
+        println!("Reservation declined.");
+    }
 
     // Close the connection
     ws_stream
