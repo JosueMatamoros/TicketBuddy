@@ -63,7 +63,9 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                             if ws_sender.send(confirmation_message).await.is_err() {
                                 eprintln!("Failed to send message");
                             }
+
                         }
+
                     }
                 });
             }
