@@ -56,7 +56,7 @@ async fn main() {
         println!("Failed to receive message");
     }
 
-    // Ensure this message is shown only once
+    // Get the user's section choice
     let mut input = String::new();
     io::stdout().flush().unwrap();
     io::stdin()
@@ -86,9 +86,14 @@ async fn main() {
         .await
         .expect("Failed to send message");
 
-    // Simulate receiving seat suggestions from the server with hardcoded data
-    println!("Suggested seats: Section {}, Seats: 1, 2, 3", selected_section);
+    // Wait for the server to send the actual available seats
+    if let Some(Ok(Message::Text(suggested_seats))) = ws_stream.next().await {
+        println!("{}", suggested_seats);
+    } else {
+        println!("Failed to receive seat suggestions");
+    }
 
+    // Ask the user if they want to accept the suggestion
     println!("Do you want to accept this suggestion? (yes/no)");
     let mut input = String::new();
     io::stdout().flush().unwrap();
@@ -111,6 +116,7 @@ async fn main() {
         .expect("Failed to close connection");
 }
 
+// Helper function to match the selected section based on class and input
 fn match_section(class: &str, section: &str) -> &'static str {
     match class {
         "FirstClass" => match section {
