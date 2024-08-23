@@ -1,5 +1,3 @@
-// bin/client.rs
-
 // Dependencies:
 use futures_util::{SinkExt, StreamExt};
 use std::io::{self, Write};
@@ -27,7 +25,7 @@ async fn main() {
     println!("2: BusinessClass");
     println!("3: EconomyClass");
 
-    // Get the user's input
+    // Get the user's input for seat class
     let mut input = String::new();
     io::stdout().flush().unwrap(); // Flush the buffer to show the message
     io::stdin()
@@ -46,9 +44,8 @@ async fn main() {
     };
 
     // Send the selected seat class to the server
-    let message = Message::Text(selected_class.to_string());
     ws_stream
-        .send(message)
+        .send(Message::Text(selected_class.to_string()))
         .await
         .expect("Failed to send message");
 
@@ -59,23 +56,23 @@ async fn main() {
         println!("Failed to receive message");
     }
 
+    // Get the user's input for seat section
     let mut input = String::new();
     io::stdout().flush().unwrap(); // Flush the buffer to show the message
     io::stdin()
         .read_line(&mut input)
         .expect("Failed to read line");
 
-    // lamar a la fucnion
+    // Match the selected section based on the selected class
     let selected_section = match_section(selected_class, input.trim());
 
-    // enviarla
-    let message = Message::Text(selected_section.to_string());
+    // Send the selected section to the server
     ws_stream
-        .send(message)
+        .send(Message::Text(selected_section.to_string()))
         .await
         .expect("Failed to send message");
 
-    // Wait for the server to send the available seats
+    // You can add further code here to handle server response if needed
 
     // Close the connection
     ws_stream
@@ -109,6 +106,6 @@ fn match_section(class: &str, section: &str) -> &'static str {
             "5" => "H",
             _ => "D",
         },
-        _ => "EconomyClass",
+        _ => "D", // Default to a valid section in case of an invalid input
     }
 }

@@ -1,37 +1,37 @@
-// Dependencies:
-use futures_util::{SinkExt, StreamExt};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tungstenite::protocol::Message as TungsteniteMessage;
+use futures_util::{StreamExt, SinkExt};
+use crate::seat_manager::{Section, Seat};
 
-pub async fn start_socket_server() {
-    // Address to bind the server
+pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>) {
     let addr = "127.0.0.1:8080";
     let listener = TcpListener::bind(&addr).await.expect("Failed to bind");
 
     println!("WebSocket server started at: \n{}", addr);
 
-    // Loop to accept incoming connections
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {
+                let seats = Arc::clone(&seats);
                 tokio::spawn(async move {
                     let ws_stream = accept_async(stream)
                         .await
                         .expect("Error during the websocket handshake occurred");
 
-                    // Split the stream into sender and receiver
                     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
 
-                    // Receive a message from the client
-                    while let Some(Ok(TungsteniteMessage::Text(response))) =
-                        ws_receiver.next().await
-                    {
-                        println!("Received: {}", response);
-                        let response = response.as_str();
-                        let section = section_match(response);
+                    // Esperamos la selección de clase de asiento del cliente
+                    if let Some(Ok(TungsteniteMessage::Text(class_selection))) = ws_receiver.next().await {
+                        println!("Received class selection: {}", class_selection);
 
-                        let formatted_sections: String = section
+                        // Usamos section_match para obtener las secciones correspondientes a la clase seleccionada
+                        let sections = section_match(&class_selection);
+
+                        // Formateamos las secciones para enviarlas al cliente
+                        let formatted_sections: String = sections
                             .iter()
                             .enumerate()
                             .map(|(i, sec)| format!("{}: {}", i + 1, sec))
@@ -40,12 +40,29 @@ pub async fn start_socket_server() {
 
                         let sections_message = TungsteniteMessage::Text(format!(
                             "Available sections in {}:\n{}\nPlease select a section by number.",
-                            response, formatted_sections
+                            class_selection, formatted_sections
                         ));
 
+                        // Enviamos las secciones disponibles al cliente
                         if ws_sender.send(sections_message).await.is_err() {
                             eprintln!("Failed to send message");
-                            break;
+                            return;
+                        }
+
+                        // Esperamos la selección de sección del cliente
+                        if let Some(Ok(TungsteniteMessage::Text(section_selection))) = ws_receiver.next().await {
+                            println!("Received section selection: {}", section_selection);
+
+                            // Aquí puedes manejar la selección de la sección si es necesario.
+                            // Por ahora, solo confirmamos la recepción.
+                            let confirmation_message = TungsteniteMessage::Text(format!(
+                                "Section {} selected. Waiting for further instructions.",
+                                section_selection
+                            ));
+
+                            if ws_sender.send(confirmation_message).await.is_err() {
+                                eprintln!("Failed to send message");
+                            }
                         }
                     }
                 });
@@ -57,11 +74,12 @@ pub async fn start_socket_server() {
     }
 }
 
+// Función para mapear la selección de clase a las secciones disponibles
 fn section_match(section: &str) -> Vec<&str> {
     match section {
         "FirstClass" => vec!["A1", "B1", "C1"],
         "BusinessClass" => vec!["A2", "B2", "C2", "A3", "B3", "C3"],
         "EconomyClass" => vec!["D", "E", "F", "G", "H"],
-        _ => vec!["EconomyClass"],
+        _ => vec!["EconomyClass"], // Valor predeterminado si la clase no coincide
     }
 }
