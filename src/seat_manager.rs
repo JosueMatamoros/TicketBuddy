@@ -174,19 +174,15 @@ fn find_closest_sets(
     max_number: u32,
 ) -> Vec<(Section, u32, u32)> {
     let mut closest_sets = Vec::new();
-    println!("Estamos buscando asientos cercanos");
-    println!("Estmos en la seccion {:?}", section);
-    println!("Cantidad de setsOptions: {}", seats_options.len());
 
     // If no options, attempt to find available seats in the section
     {
     if seats_options.is_empty() {
-        return find_sets_available(seats, section, seats_amount, max_row, max_number);
+        return find_sets_available(seats, section, seats_amount, max_row, max_number); }
     }
-}
 
 
-    // Search in adjacent rows and combine options if necessary
+// Search in adjacent rows and combine options if necessary
     for option in &seats_options {
         let mut temp_set = Vec::new();
 
@@ -293,7 +289,7 @@ fn find_in_other_sections(
             let max_row = seats.keys().filter(|&&(sec, _, _)| sec == section).map(|&(_, row, _)| row).max().unwrap_or(0);
             let max_number = seats.keys().filter(|&&(sec, row, _)| sec == section).map(|&(_, _, number)| number).max().unwrap_or(0);
             let seats_in_section = find_sets_available(seats, section, seats_amount, max_row, max_number);
-            available_seats.extend(seats_in_section);
+            available_seats = seats_in_section.clone();
 
             if available_seats.len() >= seats_amount as usize {
                 return available_seats;
