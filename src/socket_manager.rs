@@ -4,7 +4,7 @@ use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tungstenite::protocol::Message as TungsteniteMessage;
 use futures_util::{StreamExt, SinkExt};
-use crate::seat_manager::{Section, Seat, find_seats_by_section, mark_seat_as};
+use crate::seat_manager::{Section, Seat, mark_seat_as, find_seats_across_sections};
 
 pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>) {
     let addr = "127.0.0.1:8080";
@@ -63,7 +63,7 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                                 let section_enum = section_string_to_enum(section_selection);
 
                                 // Llamamos a la función que encuentra los asientos disponibles
-                                let available_seats = find_seats_by_section(seat_count, section_enum, seats.clone());
+                                let available_seats = find_seats_across_sections(seat_count, section_enum, seats.clone());
 
                                 // Formateamos los asientos para enviarlos al cliente
                                 let formatted_seats: Vec<String> = available_seats

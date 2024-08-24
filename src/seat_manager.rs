@@ -31,6 +31,19 @@ pub enum Section {
     H,
 }
 
+/// Function to get all sections.
+impl Section {
+    pub fn all_sections() -> Vec<Section> {
+        vec![
+            Section::A1, Section::B1, Section::C1,
+            Section::A2, Section::B2, Section::C2,
+            Section::A3, Section::B3, Section::C3,
+            Section::D, Section::E, Section::F,
+            Section::G, Section::H,
+        ]
+    }
+}
+
 /// Function to create a set of seats.
 /// Returns an `Arc<Mutex<HashMap<...>>>` containing all the seats.
 pub fn create_seats() -> Arc<Mutex<HashMap<(Section, u32, u32), Seat>>> {
@@ -78,15 +91,59 @@ fn add_seats(
     }
 }
 
+/// Function to find available seats across multiple sections.
+/// This is the main entry point for seat finding.
+pub fn find_seats_across_sections(
+    seats_amount: u32,
+    preferred_section: Section,
+    seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>,
+) -> Vec<(Section, u32, u32)> {
+    let mut visited_sections = Vec::new();
+    let mut available_seats = find_seats_by_section(seats_amount, preferred_section, Arc::clone(&seats), &mut visited_sections);
+
+    if available_seats.len() < seats_amount as usize {
+        let adjacent_sections = Section::all_sections();
+
+        // Buscar en todas las secciones intentando encontrar todos los asientos en una sola sección
+        for &section in &adjacent_sections {
+            if !visited_sections.contains(&section) {
+                let seats_in_section = find_seats_by_section(seats_amount, section, Arc::clone(&seats), &mut visited_sections);
+
+                if seats_in_section.len() == seats_amount as usize {
+                    available_seats = seats_in_section;
+                    break;
+                }
+            }
+        }
+
+        // Si no se encuentran suficientes asientos en una sola sección, buscar combinaciones de diferentes secciones
+        if available_seats.len() < seats_amount as usize {
+            available_seats = find_first_n_available_seats(seats_amount, Arc::clone(&seats));
+        }
+    }
+
+    // Marcar los asientos encontrados como reservados
+    for &(section, row, number) in &available_seats {
+        mark_seat_as('R', Arc::clone(&seats), section, row, number);
+    }
+
+    available_seats
+}
+
+
+
 /// Function to find available seats in a specific section.
-/// If enough seats are not found, it attempts to find seats in other sections,
-/// and if that fails, it searches across the entire seating arrangement.
-/// The seats are marked as reserved ('R') once found.
-pub fn find_seats_by_section(
+fn find_seats_by_section(
     seats_amount: u32,
     section: Section,
     seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>,
+    visited_sections: &mut Vec<Section>,
 ) -> Vec<(Section, u32, u32)> {
+    // Agregar la sección actual a las secciones visitadas
+    if !visited_sections.contains(&section) {
+        visited_sections.push(section);
+    }
+
     let mut seats_guard = seats.lock().unwrap(); // Bloqueo del Mutex
     let mut available_seats = Vec::new();
     let mut current_row = 1;
@@ -140,27 +197,13 @@ pub fn find_seats_by_section(
         current_row += 1;
     }
 
-    let mut result = if available_seats.is_empty() {
-        find_closest_sets(best_seats_options, &seats_guard, section, seats_amount, max_row, max_number)
-    } else {
-        println!("Encontrados a la primer yupiii");
-        available_seats
-    };
-
-    // Si no se encontró la cantidad exacta, buscar en otras secciones
-    if result.len() < seats_amount as usize {
-        let mut visited_sections = vec![section];
-        result = find_in_other_sections(seats_amount, section, &seats_guard, &mut visited_sections);
+    if available_seats.len() < seats_amount as usize {
+        let closest_seats = find_closest_sets(best_seats_options, &seats_guard, section, seats_amount - available_seats.len() as u32, max_row, max_number);
+        available_seats.extend(closest_seats);
     }
 
-    // Marcar los asientos encontrados como reservados (R)
-    for &(section, row, number) in &result {
-        if let Some(seat) = seats_guard.get_mut(&(section, row, number)) {
-            seat.booked = 'R';
-        }
-    }
-
-    result
+    available_seats.truncate(seats_amount as usize);
+    available_seats
 }
 
 /// Helper function to find the closest sets of available seats.
@@ -176,13 +219,11 @@ fn find_closest_sets(
     let mut closest_sets = Vec::new();
 
     // If no options, attempt to find available seats in the section
-    {
     if seats_options.is_empty() {
-        return find_sets_available(seats, section, seats_amount, max_row, max_number); }
+        return find_sets_available(seats, section, seats_amount, max_row, max_number);
     }
 
-
-// Search in adjacent rows and combine options if necessary
+    // Search in adjacent rows and combine options if necessary
     for option in &seats_options {
         let mut temp_set = Vec::new();
 
@@ -248,7 +289,6 @@ fn find_sets_available(
     max_row: u32,
     max_number: u32,
 ) -> Vec<(Section, u32, u32)> {
-    println!("Estamos buscando en toda la disposición de asientos en la sección {:?}", section);
     let mut available_seats = Vec::new();
 
     for row in 1..=max_row {
@@ -268,31 +308,19 @@ fn find_sets_available(
     available_seats
 }
 
-fn find_in_other_sections(
+/// Función que recorre todos los asientos y devuelve los primeros `n` asientos disponibles.
+pub fn find_first_n_available_seats(
     seats_amount: u32,
-    original_section: Section,
-    seats: &HashMap<(Section, u32, u32), Seat>,
-    visited_sections: &mut Vec<Section>
+    seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>,
 ) -> Vec<(Section, u32, u32)> {
-    let adjacent_sections = match original_section {
-        Section::A1 | Section::B1 | Section::C1 => vec![Section::A1, Section::B1, Section::C1],
-        Section::A2 | Section::B2 | Section::C2 => vec![Section::A2, Section::B2, Section::C2],
-        Section::A3 | Section::B3 | Section::C3 => vec![Section::A3, Section::B3, Section::C3],
-        _ => vec![Section::D, Section::E, Section::F, Section::G, Section::H],
-    };
-
+    let seats_guard = seats.lock().unwrap(); // Bloqueo del Mutex
     let mut available_seats = Vec::new();
 
-    for &section in &adjacent_sections {
-        if !visited_sections.contains(&section) {
-            visited_sections.push(section);
-            let max_row = seats.keys().filter(|&&(sec, _, _)| sec == section).map(|&(_, row, _)| row).max().unwrap_or(0);
-            let max_number = seats.keys().filter(|&&(sec, row, _)| sec == section).map(|&(_, _, number)| number).max().unwrap_or(0);
-            let seats_in_section = find_sets_available(seats, section, seats_amount, max_row, max_number);
-            available_seats = seats_in_section.clone();
-
-            if available_seats.len() >= seats_amount as usize {
-                return available_seats;
+    for (&key, seat) in seats_guard.iter() {
+        if seat.booked == 'F' {
+            available_seats.push(key);
+            if available_seats.len() == seats_amount as usize {
+                break;
             }
         }
     }
@@ -300,6 +328,7 @@ fn find_in_other_sections(
     available_seats
 }
 
+/// Function to mark a seat as reserved or in any other state.
 pub fn mark_seat_as(
     state: char,
     seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>,
@@ -311,4 +340,21 @@ pub fn mark_seat_as(
     if let Some(seat) = seats_guard.get_mut(&(section, row, number)) {
         seat.booked = state;
     }
+}
+
+
+pub fn find_available_seats(
+    seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>
+) -> Vec<(Section, u32, u32)> {
+    let seats_guard = seats.lock().unwrap(); // Bloqueo del Mutex
+    let mut available_seats = Vec::new();
+
+    for (&key, seat) in seats_guard.iter() {
+        if seat.booked == 'F' {
+            println!("Available seat: {:?}", key);
+            available_seats.push(key);
+        }
+    }
+
+    available_seats
 }
