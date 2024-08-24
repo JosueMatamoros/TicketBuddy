@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
+/// Structure representing a seat.
 #[derive(Debug)]
 pub struct Seat {
     pub number: u32,
@@ -11,6 +12,7 @@ pub struct Seat {
     pub booked: char, // B = Booked, R = Reserved, F = Free
 }
 
+/// Enum representing different sections in the seating arrangement.
 #[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
 pub enum Section {
     A1,
@@ -29,6 +31,8 @@ pub enum Section {
     H,
 }
 
+/// Function to create a set of seats.
+/// Returns an `Arc<Mutex<HashMap<...>>>` containing all the seats.
 pub fn create_seats() -> Arc<Mutex<HashMap<(Section, u32, u32), Seat>>> {
     let mut seats = HashMap::new();
 
@@ -45,6 +49,8 @@ pub fn create_seats() -> Arc<Mutex<HashMap<(Section, u32, u32), Seat>>> {
     Arc::new(Mutex::new(seats))
 }
 
+/// Helper function to add seats to the seating arrangement.
+/// Modifies the provided `HashMap` with the specified sections, rows, and numbers.
 fn add_seats(
     seats: &mut HashMap<(Section, u32, u32), Seat>,
     sections: &[Section],
@@ -72,6 +78,10 @@ fn add_seats(
     }
 }
 
+/// Function to find available seats in a specific section.
+/// If enough seats are not found, it attempts to find seats in other sections,
+/// and if that fails, it searches across the entire seating arrangement.
+/// The seats are marked as reserved ('R') once found.
 pub fn find_seats_by_section(
     seats_amount: u32,
     section: Section,
@@ -130,11 +140,18 @@ pub fn find_seats_by_section(
         current_row += 1;
     }
 
-    let result = if available_seats.is_empty() {
+    let mut result = if available_seats.is_empty() {
         find_closest_sets(best_seats_options, &seats_guard, section, seats_amount, max_row, max_number)
     } else {
+        println!("Encontrados a la primer yupiii");
         available_seats
     };
+
+    // Si no se encontró la cantidad exacta, buscar en otras secciones
+    if result.len() < seats_amount as usize {
+        let mut visited_sections = vec![section];
+        result = find_in_other_sections(seats_amount, section, &seats_guard, &mut visited_sections);
+    }
 
     // Marcar los asientos encontrados como reservados (R)
     for &(section, row, number) in &result {
@@ -146,6 +163,8 @@ pub fn find_seats_by_section(
     result
 }
 
+/// Helper function to find the closest sets of available seats.
+/// This function is called when not enough seats are found in the direct search.
 fn find_closest_sets(
     seats_options: Vec<Vec<(Section, u32, u32)>>,
     seats: &HashMap<(Section, u32, u32), Seat>,
@@ -155,27 +174,30 @@ fn find_closest_sets(
     max_number: u32,
 ) -> Vec<(Section, u32, u32)> {
     let mut closest_sets = Vec::new();
+    println!("Estamos buscando asientos cercanos");
+    println!("Estmos en la seccion {:?}", section);
+    println!("Cantidad de setsOptions: {}", seats_options.len());
 
-    // Verificar si hay opciones de asientos juntos
+    // If no options, attempt to find available seats in the section
+    {
     if seats_options.is_empty() {
-        // Si no hay asientos juntos, intentar buscar asientos disponibles en la sección
         return find_sets_available(seats, section, seats_amount, max_row, max_number);
     }
+}
 
-    // Primera fase: buscar en las filas adyacentes y combinar opciones si es necesario
+
+    // Search in adjacent rows and combine options if necessary
     for option in &seats_options {
         let mut temp_set = Vec::new();
 
         for &(section, row, number) in option {
-            // Agregar el asiento original
             temp_set.push((section, row, number));
 
-            // Si ya encontramos suficientes asientos, salimos
             if temp_set.len() >= seats_amount as usize {
                 return temp_set;
             }
 
-            // Buscar en la fila superior
+            // Look for seats in the adjacent rows
             if row < max_row && temp_set.len() < seats_amount as usize {
                 if let Some(seat) = seats.get(&(section, row + 1, number)) {
                     if seat.booked == 'F' {
@@ -184,7 +206,6 @@ fn find_closest_sets(
                 }
             }
 
-            // Buscar en la fila inferior
             if row > 1 && temp_set.len() < seats_amount as usize {
                 if let Some(seat) = seats.get(&(section, row - 1, number)) {
                     if seat.booked == 'F' {
@@ -193,13 +214,11 @@ fn find_closest_sets(
                 }
             }
 
-            // Si ya encontramos suficientes asientos, salimos
             if temp_set.len() >= seats_amount as usize {
                 return temp_set;
             }
         }
 
-        // Agregar la combinación temporal al conjunto de resultados
         closest_sets.extend(temp_set);
 
         if closest_sets.len() >= seats_amount as usize {
@@ -208,7 +227,7 @@ fn find_closest_sets(
         }
     }
 
-    // Segunda fase: intentar combinar las mejores opciones si aún no hemos encontrado suficientes asientos
+    // Combine the best options if not enough seats were found
     let mut best_combination = Vec::new();
 
     for option in seats_options {
@@ -220,11 +239,12 @@ fn find_closest_sets(
         }
     }
 
-    // Si no se encontraron suficientes asientos, intentar buscar en toda la sección
+    // If still not enough seats, search the entire section
     find_sets_available(seats, section, seats_amount, max_row, max_number)
 }
 
-
+/// Function to find available seats across the entire seating arrangement.
+/// This is called when not enough seats are found in any specific section.
 fn find_sets_available(
     seats: &HashMap<(Section, u32, u32), Seat>,
     section: Section,
@@ -232,18 +252,51 @@ fn find_sets_available(
     max_row: u32,
     max_number: u32,
 ) -> Vec<(Section, u32, u32)> {
+    println!("Estamos buscando en toda la disposición de asientos en la sección {:?}", section);
     let mut available_seats = Vec::new();
+
     for row in 1..=max_row {
         for number in 1..=max_number {
             if let Some(seat) = seats.get(&(section, row, number)) {
                 if seat.booked == 'F' {
                     available_seats.push((section, row, number));
 
-                    // Si ya tenemos suficientes asientos, retornarlos
                     if available_seats.len() >= seats_amount as usize {
                         return available_seats;
                     }
                 }
+            }
+        }
+    }
+
+    available_seats
+}
+
+fn find_in_other_sections(
+    seats_amount: u32,
+    original_section: Section,
+    seats: &HashMap<(Section, u32, u32), Seat>,
+    visited_sections: &mut Vec<Section>
+) -> Vec<(Section, u32, u32)> {
+    let adjacent_sections = match original_section {
+        Section::A1 | Section::B1 | Section::C1 => vec![Section::A1, Section::B1, Section::C1],
+        Section::A2 | Section::B2 | Section::C2 => vec![Section::A2, Section::B2, Section::C2],
+        Section::A3 | Section::B3 | Section::C3 => vec![Section::A3, Section::B3, Section::C3],
+        _ => vec![Section::D, Section::E, Section::F, Section::G, Section::H],
+    };
+
+    let mut available_seats = Vec::new();
+
+    for &section in &adjacent_sections {
+        if !visited_sections.contains(&section) {
+            visited_sections.push(section);
+            let max_row = seats.keys().filter(|&&(sec, _, _)| sec == section).map(|&(_, row, _)| row).max().unwrap_or(0);
+            let max_number = seats.keys().filter(|&&(sec, row, _)| sec == section).map(|&(_, _, number)| number).max().unwrap_or(0);
+            let seats_in_section = find_sets_available(seats, section, seats_amount, max_row, max_number);
+            available_seats.extend(seats_in_section);
+
+            if available_seats.len() >= seats_amount as usize {
+                return available_seats;
             }
         }
     }
@@ -258,10 +311,8 @@ pub fn mark_seat_as(
     row: u32,
     number: u32,
 ) {
-    let mut seats = seats.lock().unwrap();
-    if let Some(seat) = seats.get_mut(&(section, row, number)) {
+    let mut seats_guard = seats.lock().unwrap();
+    if let Some(seat) = seats_guard.get_mut(&(section, row, number)) {
         seat.booked = state;
     }
 }
-
-

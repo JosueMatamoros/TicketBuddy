@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use tokio::task;
 use crate::seat_manager::{find_seats_by_section, Section, Seat, mark_seat_as};
+use tokio::time::{sleep, Duration};
 
 pub async fn run_test(seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>) {
     let sections = vec![Section::A1, Section::B1, Section::C1];
@@ -29,6 +30,10 @@ pub async fn run_test(seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>) {
         });
 
         handles.push(handle);
+        // Pausa de 500 milisegundos entre cada solicitud
+        sleep(Duration::from_millis(500)).await;
+
+
     }
 
     // Esperar a que todas las tareas terminen
