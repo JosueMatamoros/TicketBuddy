@@ -15,9 +15,13 @@ async fn main() {
 
     println!("Connected to the server");
 
-    let link_text = "https://drive.google.com/file/d/1efPl7oIHmTxqy8vn9Lq5GSOCEO7RoEnv/view?usp=sharing";
+    let link_text =
+        "https://drive.google.com/file/d/1efPl7oIHmTxqy8vn9Lq5GSOCEO7RoEnv/view?usp=sharing"; // Link to the stage distribution illustration
     let clickable_link = format!("\x1b]8;;{}\x1b\\Click Here\x1b]8;;\x1b\\", link_text);
-    println!("If you need more information about our stage distribution, {}", clickable_link);
+    println!(
+        "If you need more information about our stage distribution, {}",
+        clickable_link
+    );
 
     // Show the user the available seat classes
     println!("Please select a seat class:");
@@ -71,11 +75,16 @@ async fn main() {
         println!("You can reserve up to {} seats in this section. How many seats would you like to reserve?", max_seats);
         let mut input = String::new();
         io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
 
         match input.trim().parse::<u32>() {
-            Ok(n) if n>= 1 && n <= max_seats => break n,
-            _ => println!("Invalid number of seats. Please enter a number between 1 and {}", max_seats),
+            Ok(n) if n >= 1 && n <= max_seats => break n,
+            _ => println!(
+                "Invalid number of seats. Please enter a number between 1 and {}",
+                max_seats
+            ),
         }
     };
 
@@ -89,7 +98,7 @@ async fn main() {
     // Wait for the server to send the seat suggestions
     if let Some(Ok(Message::Text(seat_suggestions))) = ws_stream.next().await {
         println!("The format of the seat suggestions is: Section - Row - Number");
-        println!("Sugested seats:");
+        println!("Suggested seats:");
         for suggestion in seat_suggestions.split(", ") {
             println!("{}", suggestion);
         }
@@ -103,7 +112,9 @@ async fn main() {
     println!("2: No");
     let mut input = String::new();
     io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
 
     // Send the confirmation response to the server
     ws_stream
