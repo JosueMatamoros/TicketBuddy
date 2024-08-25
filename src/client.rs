@@ -15,7 +15,7 @@ async fn main() {
 
     println!("Connected to the server");
 
-    let link_text = "https://drive.google.com/file/d/1WbfwatCyM9QffUuCYRkS1nKkzq_9FBrT/view?usp=sharing";
+    let link_text = "https://drive.google.com/file/d/1efPl7oIHmTxqy8vn9Lq5GSOCEO7RoEnv/view?usp=sharing";
     let clickable_link = format!("\x1b]8;;{}\x1b\\Click Here\x1b]8;;\x1b\\", link_text);
     println!("If you need more information about our stage distribution, {}", clickable_link);
 
