@@ -358,3 +358,32 @@ pub fn find_available_seats(
 
     available_seats
 }
+
+/// Función para marcar los asientos predefinidos como reservados.
+pub fn mark_predefined_seats_as_booked(
+    seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>,
+    predefined_seats: Vec<(&str, u32, u32)>,
+) {
+    for (section, row, number) in predefined_seats {
+        let section_enum = match section {
+            "A1" => Section::A1,
+            "B1" => Section::B1,
+            "C1" => Section::C1,
+            "A2" => Section::A2,
+            "B2" => Section::B2,
+            "C2" => Section::C2,
+            "A3" => Section::A3,
+            "B3" => Section::B3,
+            "C3" => Section::C3,
+            "D" => Section::D,
+            "E" => Section::E,
+            "F" => Section::F,
+            "G" => Section::G,
+            "H" => Section::H,
+            _ => continue, // Si no se encuentra una sección válida, omitir
+        };
+
+        // Marca el asiento como reservado ("B")
+        mark_seat_as('B', Arc::clone(&seats), section_enum, row, number);
+    }
+}

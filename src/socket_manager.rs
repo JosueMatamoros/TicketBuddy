@@ -68,11 +68,11 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                                 // Formateamos los asientos para enviarlos al cliente
                                 let formatted_seats: Vec<String> = available_seats
                                     .iter()
-                                    .map(|(section, row, number)| format!("{:?} - {} - {}", section, row, number))
+                                    .map(|(section, row, number)| format!("{:?}-{}-{}", section, row, number))
                                     .collect();
 
                                 let seat_suggestion_message = TungsteniteMessage::Text(format!(
-                                    "Suggested seats: {}",
+                                    "{}",
                                     formatted_seats.join(", ")
                                 ));
 
@@ -83,22 +83,26 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
 
                                 // Esperar la confirmación del cliente
                                 if let Some(Ok(TungsteniteMessage::Text(confirmation))) = ws_receiver.next().await {
-                                    if confirmation.trim().eq_ignore_ascii_case("yes") {
-                                        // Si el cliente acepta la sugerencia, marcamos los asientos como reservados ("B")
-                                        for (section, row, number) in available_seats {
-                                            mark_seat_as('F', seats.clone(), section, row, number);
+                                    match confirmation.trim() {
+                                        "1" => {
+                                            // Si el cliente elige 1, marcamos los asientos como reservados ("B")
+                                            for (section, row, number) in available_seats {
+                                                mark_seat_as('B', seats.clone(), section, row, number);
+                                            }
+                                            println!("Seats confirmed and marked as reserved.");
                                         }
-                                        println!("Seats declined and marked as free.");
-                                    } else {
-                                        // Si el cliente rechaza la sugerencia, marcamos los asientos como disponibles ("F")
-                                        for (section, row, number) in available_seats {
-                                            mark_seat_as('B', seats.clone(), section, row, number);
+                                        "2" => {
+                                            // Si el cliente elige 2, marcamos los asientos como disponibles ("F")
+                                            for (section, row, number) in available_seats {
+                                                mark_seat_as('F', seats.clone(), section, row, number);
+                                            }
+                                            println!("Seats declined and marked as free.");
                                         }
-                                        println!("Seats confirmed and marked as reserved.");
+                                        _ => {
+                                            println!("Invalid selection received.");
+                                        }
                                     }
                                 }
-                            } else {
-                                eprintln!("Invalid section selection and seat count received.");
                             }
                         }
                     }
