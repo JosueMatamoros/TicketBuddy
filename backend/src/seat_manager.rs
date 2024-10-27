@@ -12,8 +12,16 @@ pub struct Seat {
     pub booked: char, // 'B' = Reservado, 'R' = Reservado temporalmente, 'F' = Libre
 }
 
+#[derive(Debug, Serialize)]
+pub struct SeatState {
+    pub section: Section,
+    pub row: u32,
+    pub number: u32,
+    pub booked: char,
+}
+
 /// Enumeración que representa las diferentes secciones en la disposición de asientos.
-#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy, Serialize, Deserialize)]
 pub enum Section {
     A1,
     B1,
@@ -395,4 +403,23 @@ pub fn find_available_seats(
     }
 
     available_seats
+}
+
+/// Función para obtener el estado actual de todos los asientos
+pub fn get_seat_states(
+    seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>,
+) -> Vec<SeatState> {
+    let seats_guard = seats.lock().unwrap();
+    let mut seat_states = Vec::new();
+
+    for ((section, row, number), seat) in seats_guard.iter() {
+        seat_states.push(SeatState {
+            section: *section,
+            row: *row,
+            number: *number,
+            booked: seat.booked,
+        });
+    }
+
+    seat_states
 }

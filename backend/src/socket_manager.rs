@@ -1,4 +1,4 @@
-use crate::seat_manager::{find_seats_suggestions, mark_seat_as, Seat, Section};
+use crate::seat_manager::{find_seats_suggestions, get_seat_states, mark_seat_as, Seat, Section};
 use futures_util::{SinkExt, StreamExt};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -22,6 +22,18 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                         .expect("Error durante el handshake WebSocket");
 
                     let (mut ws_sender, mut ws_receiver) = ws_stream.split();
+
+                    // Enviar el estado actual de los asientos al cliente al conectarse
+                    let seat_states = get_seat_states(seats.clone());
+                    let seat_states_json = serde_json::to_string(&seat_states).unwrap();
+
+                    if ws_sender
+                        .send(TungsteniteMessage::Text(seat_states_json))
+                        .await
+                        .is_err()
+                    {
+                        eprintln!("Error al enviar el estado de los asientos al cliente");
+                    }
 
                     // Esperar a que el cliente envíe el número de asientos
                     if let Some(Ok(TungsteniteMessage::Text(seat_count_str))) = ws_receiver.next().await {
