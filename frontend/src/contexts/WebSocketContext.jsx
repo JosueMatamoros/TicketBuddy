@@ -9,24 +9,32 @@ export const WebSocketProvider = ({ children }) => {
   const [connected, setConnected] = useState(false);
   const [suggestions, setSuggestions] = useState([]); // Almacena las sugerencias de asientos
   const [serverMessage, setServerMessage] = useState(''); // Almacena mensajes de confirmación o rechazo
+  const [seatStates, setSeatStates] = useState([]); // Almacena el estado de los asientos
 
   useEffect(() => {
     WebSocketInstance.connect();
 
     WebSocketInstance.addCallbacks((data) => {
-      // Manejar los diferentes tipos de mensajes recibidos del servidor
-      if (data.startsWith('Sugerencia')) {
-        // Recibimos las sugerencias
-        const suggestionsArray = data.split('|');
-        setSuggestions(suggestionsArray);
-        setServerMessage('');
-      } else if (data === 'Reserva confirmada' || data === 'Reserva rechazada') {
-        // Recibimos la confirmación o rechazo
-        setServerMessage(data);
-        setSuggestions([]); // Limpiamos las sugerencias
-      } else {
-        // Otros mensajes
-        setServerMessage(data);
+      try {
+        const jsonData = JSON.parse(data);
+        if (Array.isArray(jsonData)) {
+          // Asumimos que es el estado de los asientos
+          setSeatStates(jsonData);
+        }
+      } catch (e) {
+        if (data.startsWith('Sugerencia')) {
+          // Recibimos las sugerencias
+          const suggestionsArray = data.split('|');
+          setSuggestions(suggestionsArray);
+          setServerMessage('');
+        } else if (data === 'Reserva confirmada' || data === 'Reserva rechazada') {
+          // Recibimos la confirmación o rechazo
+          setServerMessage(data);
+          setSuggestions([]); // Limpiamos las sugerencias
+        } else {
+          // Otros mensajes
+          setServerMessage(data);
+        }
       }
     });
 
@@ -55,6 +63,7 @@ export const WebSocketProvider = ({ children }) => {
         connected,
         suggestions,
         serverMessage,
+        seatStates,
         sendSeatRequest,
         sendChoice,
       }}
