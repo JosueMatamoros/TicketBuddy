@@ -2,21 +2,22 @@
 
 import React, { useState } from 'react';
 import SeatReservationForm from '../components/SeatReservationForm';
-import SeatSuggestions from '../components/SeatSuggestions';
+import SeatSuggestionList from '../components/SeatSuggestions';
 import { WebSocketProvider, useWebSocket } from '../contexts/WebSocketContext';
 
 /**
  * Home es la vista principal donde los usuarios pueden solicitar reservas de asientos
- * y ver las sugerencias proporcionadas por el servidor.
- * 
- * - **Patrón Presentational-Container**: 
- *   Este componente `Home` actúa como el **componente contenedor** que maneja la lógica de negocio 
- *   (conexión WebSocket y envío de solicitudes de asientos). Los componentes `SeatReservationForm` y 
- *   `SeatSuggestions` son **componentes presentacionales** que se encargan de mostrar la UI.
+ * y manejar las sugerencias proporcionadas por el servidor.
  */
 
 const HomeContent = () => {
-  const { connected, seatSuggestions, sendSeatRequest } = useWebSocket();
+  const {
+    connected,
+    suggestions,
+    serverMessage,
+    sendSeatRequest,
+    sendChoice,
+  } = useWebSocket();
   const [seatCount, setSeatCount] = useState(1);
 
   // Maneja el envío de la solicitud de asientos
@@ -33,7 +34,14 @@ const HomeContent = () => {
         handleSeatRequest={handleSeatRequest}
         connected={connected}
       />
-      <SeatSuggestions seatSuggestions={seatSuggestions} />
+      {suggestions.length > 0 && (
+        <SeatSuggestionList suggestions={suggestions} sendChoice={sendChoice} />
+      )}
+      {serverMessage && (
+        <div className="mt-4">
+          <h2 className="text-2xl font-bold mb-2">{serverMessage}</h2>
+        </div>
+      )}
     </div>
   );
 };

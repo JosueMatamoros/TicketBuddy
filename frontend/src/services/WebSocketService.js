@@ -1,13 +1,5 @@
 // src/services/WebSocketService.js
 
-/**
- * WebSocketService encapsula toda la lógica relacionada con WebSockets.
- * 
- * - **Patrón Singleton**: Asegura que solo haya una instancia de WebSocketService en toda la aplicación.
- * - **Encapsulación**: Mantiene la lógica de conexión, manejo de mensajes y reconexión dentro de la clase.
- * - **Reutilización**: Permite que múltiples componentes utilicen la misma conexión WebSocket sin duplicar código.
- */
-
 class WebSocketService {
   static instance = null;
   callbacks = {};

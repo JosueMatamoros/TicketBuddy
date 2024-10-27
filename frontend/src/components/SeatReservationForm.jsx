@@ -19,7 +19,7 @@ const SeatReservationForm = ({ seatCount, setSeatCount, handleSeatRequest, conne
         className="border border-gray-300 p-2 rounded-md w-32 mb-4"
       />
       <Button color="blue" onClick={handleSeatRequest} disabled={!connected}>
-        Solicitar Asientos
+        Solicitar Sugerencias
       </Button>
     </div>
   );
