@@ -1,4 +1,5 @@
 # Compiled files
+target/
 **/*.rs.bk
 
 # Package-specific files
