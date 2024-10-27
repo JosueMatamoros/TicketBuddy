@@ -1,104 +1,55 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/Home.jsx
 
-const Home = () => {
-  const [ws, setWs] = useState(null);
-  const [seatSuggestions, setSeatSuggestions] = useState([]);
+import React, { useState } from 'react';
+import SeatReservationForm from '../components/SeatReservationForm';
+import SeatSuggestionList from '../components/SeatSuggestions';
+import { WebSocketProvider, useWebSocket } from '../contexts/WebSocketContext';
+
+/**
+ * Home es la vista principal donde los usuarios pueden solicitar reservas de asientos
+ * y manejar las sugerencias proporcionadas por el servidor.
+ */
+
+const HomeContent = () => {
+  const {
+    connected,
+    suggestions,
+    serverMessage,
+    sendSeatRequest,
+    sendChoice,
+  } = useWebSocket();
   const [seatCount, setSeatCount] = useState(1);
-  const [connected, setConnected] = useState(false);
-  const [reservationStatus, setReservationStatus] = useState('');
 
-  useEffect(() => {
-    // Crear y abrir la conexión WebSocket
-    const wsClient = new WebSocket('ws://127.0.0.1:8080');
-    setWs(wsClient);
-
-    wsClient.onopen = () => {
-      console.log('Conectado al servidor WebSocket');
-      setConnected(true);
-    };
-
-    wsClient.onmessage = (event) => {
-      const data = event.data;
-      console.log('Recibido del servidor:', data);
-
-      if (data === 'Reserva confirmada' || data === 'Reserva rechazada') {
-        setReservationStatus(data);
-      } else {
-        // Suponemos que las sugerencias están separadas por '|'
-        const suggestions = data.split('|').map((suggestion) => suggestion.trim());
-        setSeatSuggestions(suggestions);
-      }
-    };
-
-    wsClient.onerror = (error) => {
-      console.error('Error en WebSocket:', error);
-    };
-
-    wsClient.onclose = () => {
-      console.log('Conexión WebSocket cerrada');
-      setConnected(false);
-    };
-
-    // Cerrar la conexión cuando el componente se desmonte
-    return () => wsClient.close();
-  }, []);
-
+  // Maneja el envío de la solicitud de asientos
   const handleSeatRequest = () => {
-    if (ws && connected) {
-      // Enviar el número de asientos al servidor
-      ws.send(seatCount.toString());
-      console.log('Número de asientos enviado:', seatCount);
-      // Resetear estados
-      setSeatSuggestions([]);
-      setReservationStatus('');
-    } else {
-      console.error('WebSocket no está conectado');
-    }
-  };
-
-  const handleSelection = (choice) => {
-    if (ws && connected) {
-      // Enviar la elección al servidor
-      ws.send(choice.toString());
-    } else {
-      console.error('WebSocket no está conectado');
-    }
+    sendSeatRequest(seatCount);
   };
 
   return (
-    <div>
-      <h1>Reserva de Asientos</h1>
-      <div>
-        <label htmlFor="seatCount">Número de asientos:</label>
-        <input
-          id="seatCount"
-          type="number"
-          min="1"
-          max="10"
-          value={seatCount}
-          onChange={(e) => setSeatCount(e.target.value)}
-        />
-        <button onClick={handleSeatRequest}>Solicitar Asientos</button>
-      </div>
-      <div>
-        <h2>Asientos sugeridos:</h2>
-        {seatSuggestions.length > 0 ? (
-          <div>
-            {seatSuggestions.map((suggestion, index) => (
-              <div key={index}>
-                <p>{suggestion}</p>
-                <button onClick={() => handleSelection(index + 1)}>Aceptar Sugerencia {index + 1}</button>
-              </div>
-            ))}
-            <button onClick={() => handleSelection(0)}>Rechazar todas las sugerencias</button>
-          </div>
-        ) : (
-          <p>No hay sugerencias de asientos aún.</p>
-        )}
-      </div>
-      {reservationStatus && <p>{reservationStatus}</p>}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      <h1 className="text-4xl font-bold mb-6">Reserva de Asientos</h1>
+      <SeatReservationForm
+        seatCount={seatCount}
+        setSeatCount={setSeatCount}
+        handleSeatRequest={handleSeatRequest}
+        connected={connected}
+      />
+      {suggestions.length > 0 && (
+        <SeatSuggestionList suggestions={suggestions} sendChoice={sendChoice} />
+      )}
+      {serverMessage && (
+        <div className="mt-4">
+          <h2 className="text-2xl font-bold mb-2">{serverMessage}</h2>
+        </div>
+      )}
     </div>
   );
 };
+
+const Home = () => (
+  <WebSocketProvider>
+    <HomeContent />
+  </WebSocketProvider>
+);
 
 export default Home;
