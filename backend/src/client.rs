@@ -15,9 +15,13 @@ async fn main() {
 
     println!("Connected to the server");
 
-    let link_text = "https://drive.google.com/file/d/1efPl7oIHmTxqy8vn9Lq5GSOCEO7RoEnv/view?usp=sharing";
+    let link_text =
+        "https://drive.google.com/file/d/1efPl7oIHmTxqy8vn9Lq5GSOCEO7RoEnv/view?usp=sharing"; // Link to the stage distribution illustration
     let clickable_link = format!("\x1b]8;;{}\x1b\\Click Here\x1b]8;;\x1b\\", link_text);
-    println!("If you need more information about our stage distribution, {}", clickable_link);
+    println!(
+        "If you need more information about our stage distribution, {}",
+        clickable_link
+    );
 
     // Show the user the available seat classes
     println!("Please select a seat class:");
@@ -56,7 +60,7 @@ async fn main() {
         println!("Failed to receive message");
     }
 
-    // Get the user's section choice
+    // Ensure this message is shown only once
     let mut input = String::new();
     io::stdout().flush().unwrap();
     io::stdin()
@@ -71,11 +75,16 @@ async fn main() {
         println!("You can reserve up to {} seats in this section. How many seats would you like to reserve?", max_seats);
         let mut input = String::new();
         io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
 
         match input.trim().parse::<u32>() {
-            Ok(n) if n <= max_seats => break n,
-            _ => println!("Invalid number of seats. Please enter a number between 1 and {}", max_seats),
+            Ok(n) if n >= 1 && n <= max_seats => break n,
+            _ => println!(
+                "Invalid number of seats. Please enter a number between 1 and {}",
+                max_seats
+            ),
         }
     };
 
@@ -86,28 +95,32 @@ async fn main() {
         .await
         .expect("Failed to send message");
 
-    // Wait for the server to send the actual available seats
-    if let Some(Ok(Message::Text(suggested_seats))) = ws_stream.next().await {
-        println!("{}", suggested_seats);
+    // Wait for the server to send the seat suggestions
+    if let Some(Ok(Message::Text(seat_suggestions))) = ws_stream.next().await {
+        println!("The format of the seat suggestions is: Section - Row - Number");
+        println!("Suggested seats:");
+        for suggestion in seat_suggestions.split(", ") {
+            println!("{}", suggestion);
+        }
     } else {
         println!("Failed to receive seat suggestions");
     }
 
-    // Ask the user if they want to accept the suggestion
-    println!("Do you want to accept this suggestion? (yes/no)");
+    // Ask the user to confirm the seat selection
+    println!("Do you want to accept this suggestion?");
+    println!("1: Yes");
+    println!("2: No");
     let mut input = String::new();
     io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
 
-    if input.trim().eq_ignore_ascii_case("yes") {
-        ws_stream
-            .send(Message::Text("ACCEPT".to_string()))
-            .await
-            .expect("Failed to send acceptance message");
-        println!("Reservation accepted.");
-    } else {
-        println!("Reservation declined.");
-    }
+    // Send the confirmation response to the server
+    ws_stream
+        .send(Message::Text(input.trim().to_string()))
+        .await
+        .expect("Failed to send confirmation message");
 
     // Close the connection
     ws_stream
@@ -116,7 +129,7 @@ async fn main() {
         .expect("Failed to close connection");
 }
 
-// Helper function to match the selected section based on class and input
+// Helper function to map class and section numbers
 fn match_section(class: &str, section: &str) -> &'static str {
     match class {
         "FirstClass" => match section {
