@@ -1,5 +1,5 @@
 // src/test.rs
-use crate::seat_manager::{find_seats_across_sections, mark_seat_as, Seat, Section};
+use crate::seat_manager::{mark_seat_as, Seat, Section};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::time::{sleep, Duration};
@@ -145,37 +145,4 @@ pub fn mark_predefined_seats_as_booked(seats: Arc<Mutex<HashMap<(Section, u32, u
         // Mark the seat as booked
         mark_seat_as('B', Arc::clone(&seats), section_enum, row, number);
     }
-}
-
-// Test function (NOT NEEDED FOR THE PROJECT FUNCTIONALITY)
-pub async fn run_test(
-    seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>,
-) -> Arc<Mutex<HashMap<(Section, u32, u32), Seat>>> {
-    let sections = vec![Section::A1, Section::B1, Section::C1];
-
-    let mut handles = vec![];
-
-    for i in 0..110 {
-        let seats_clone = Arc::clone(&seats); // Clone the seats Arc
-        let section = sections[i % sections.len()]; // Get the section based on the index A1 -> B1 -> C1
-
-        let handle = tokio::spawn(async move {
-            let available_seats = find_seats_across_sections(3, section, seats_clone); // Find 3 available seats in the section
-            println!(
-                "Client {} requested section {:?} and found seats: {:?}",
-                i, section, available_seats
-            ); // Print the available seats
-        });
-
-        handles.push(handle);
-        // Sleep for 500ms to simulate a client request
-        sleep(Duration::from_millis(500)).await;
-    }
-
-    // Wait for all the handles to finish
-    for handle in handles {
-        handle.await.unwrap();
-    }
-
-    seats
 }

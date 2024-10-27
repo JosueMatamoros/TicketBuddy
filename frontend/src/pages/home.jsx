@@ -1,4 +1,3 @@
-// pages/Home.jsx
 import React, { useEffect, useState } from 'react';
 
 const Home = () => {
@@ -6,6 +5,7 @@ const Home = () => {
   const [seatSuggestions, setSeatSuggestions] = useState([]);
   const [seatCount, setSeatCount] = useState(1);
   const [connected, setConnected] = useState(false);
+  const [reservationStatus, setReservationStatus] = useState('');
 
   useEffect(() => {
     // Crear y abrir la conexión WebSocket
@@ -13,25 +13,29 @@ const Home = () => {
     setWs(wsClient);
 
     wsClient.onopen = () => {
-      console.log('Connected to WebSocket server');
+      console.log('Conectado al servidor WebSocket');
       setConnected(true);
     };
 
     wsClient.onmessage = (event) => {
       const data = event.data;
-      console.log('Received from server:', data);
+      console.log('Recibido del servidor:', data);
 
-      // Suponemos que el servidor envía una lista de asientos en formato de cadena
-      const seats = data.split(', ');
-      setSeatSuggestions(seats);
+      if (data === 'Reserva confirmada' || data === 'Reserva rechazada') {
+        setReservationStatus(data);
+      } else {
+        // Suponemos que las sugerencias están separadas por '|'
+        const suggestions = data.split('|').map((suggestion) => suggestion.trim());
+        setSeatSuggestions(suggestions);
+      }
     };
 
     wsClient.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error('Error en WebSocket:', error);
     };
 
     wsClient.onclose = () => {
-      console.log('WebSocket connection closed');
+      console.log('Conexión WebSocket cerrada');
       setConnected(false);
     };
 
@@ -43,9 +47,21 @@ const Home = () => {
     if (ws && connected) {
       // Enviar el número de asientos al servidor
       ws.send(seatCount.toString());
-      console.log('Sent seat count:', seatCount);
+      console.log('Número de asientos enviado:', seatCount);
+      // Resetear estados
+      setSeatSuggestions([]);
+      setReservationStatus('');
     } else {
-      console.error('WebSocket is not connected');
+      console.error('WebSocket no está conectado');
+    }
+  };
+
+  const handleSelection = (choice) => {
+    if (ws && connected) {
+      // Enviar la elección al servidor
+      ws.send(choice.toString());
+    } else {
+      console.error('WebSocket no está conectado');
     }
   };
 
@@ -67,15 +83,20 @@ const Home = () => {
       <div>
         <h2>Asientos sugeridos:</h2>
         {seatSuggestions.length > 0 ? (
-          <ul>
-            {seatSuggestions.map((seat, index) => (
-              <li key={index}>{seat}</li>
+          <div>
+            {seatSuggestions.map((suggestion, index) => (
+              <div key={index}>
+                <p>{suggestion}</p>
+                <button onClick={() => handleSelection(index + 1)}>Aceptar Sugerencia {index + 1}</button>
+              </div>
             ))}
-          </ul>
+            <button onClick={() => handleSelection(0)}>Rechazar todas las sugerencias</button>
+          </div>
         ) : (
           <p>No hay sugerencias de asientos aún.</p>
         )}
       </div>
+      {reservationStatus && <p>{reservationStatus}</p>}
     </div>
   );
 };
