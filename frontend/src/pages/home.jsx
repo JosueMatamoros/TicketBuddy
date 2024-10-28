@@ -1,5 +1,3 @@
-// src/pages/Home.jsx
-
 import React from 'react';
 import SeatReservationForm from '../components/SeatReservationForm';
 import SeatMap from '../components/SeatMap';
@@ -14,6 +12,7 @@ class HomeContent extends React.Component {
       selectedCategory: '',
       suggestedSeats: [],
       selectedSuggestionIndex: null,
+      showForm: true, // Añadido
     };
     this.handleSeatRequest = this.handleSeatRequest.bind(this);
     this.setSeatCount = this.setSeatCount.bind(this);
@@ -42,6 +41,9 @@ class HomeContent extends React.Component {
 
     // Enviar la solicitud al servidor con la categoría y el número de asientos
     sendSeatRequest(seatCount, selectedCategory);
+
+    // Ocultar el formulario
+    this.setState({ showForm: false });
   }
 
   // Método para manejar la selección de una sugerencia
@@ -84,20 +86,19 @@ class HomeContent extends React.Component {
     const { selectedSuggestionIndex } = this.state;
     if (selectedSuggestionIndex !== null) {
       sendChoice(selectedSuggestionIndex + 1); // Enviar el índice de la sugerencia seleccionada (basado en 1)
-      // Opcionalmente, limpiar suggestedSeats después de aceptar
-      // this.setState({ suggestedSeats: [], selectedSuggestionIndex: null });
+      // Opcionalmente, puedes restablecer el estado aquí si es necesario
     }
   }
 
   handleRejectSuggestion() {
     const { sendChoice } = this.props;
     sendChoice(0); // Enviar '0' para indicar rechazo de todas las sugerencias
-    this.setState({ suggestedSeats: [], selectedSuggestionIndex: null });
+    this.setState({ suggestedSeats: [], selectedSuggestionIndex: null, showForm: true });
   }
 
   render() {
     const { connected, suggestions, serverMessage, seatStates } = this.props;
-    const { seatCount, selectedCategory, suggestedSeats, selectedSuggestionIndex } = this.state;
+    const { seatCount, selectedCategory, suggestedSeats, selectedSuggestionIndex, showForm } = this.state;
 
     // Procesar seatStates para que coincidan con los tipos de datos esperados
     const processedSeatStates = seatStates.map((seat) => ({
@@ -108,7 +109,7 @@ class HomeContent extends React.Component {
 
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-4xl font-bold mb-6">Reserva de Asientos</h1>
+        <h1 className="text-4xl font-bold m-2">Ticket Buddy</h1>
 
         {processedSeatStates.length > 0 ? (
           <SeatMap seatStates={processedSeatStates} suggestedSeats={suggestedSeats} />
@@ -116,14 +117,17 @@ class HomeContent extends React.Component {
           <p>Cargando estado de los asientos...</p>
         )}
 
-        <SeatReservationForm
-          seatCount={seatCount}
-          setSeatCount={this.setSeatCount}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={this.setSelectedCategory}
-          handleSeatRequest={this.handleSeatRequest}
-          connected={connected}
-        />
+        {/* Mostrar el formulario solo si showForm es true */}
+        {showForm && (
+          <SeatReservationForm
+            seatCount={seatCount}
+            setSeatCount={this.setSeatCount}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={this.setSelectedCategory}
+            handleSeatRequest={this.handleSeatRequest}
+            connected={connected}
+          />
+        )}
 
         {/* Renderizar SeatSuggestionList si hay sugerencias */}
         {suggestions.length > 0 && (

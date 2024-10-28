@@ -39,7 +39,6 @@ class SeatMap extends React.Component {
 
     return (
       <div className="mt-4">
-        <h2 className="text-2xl font-bold mb-2">Estado de los Asientos:</h2>
 
         <div className="w-full max-w-4xl p-4 ">
           {sectionGroups.map((group, groupIndex) => (
