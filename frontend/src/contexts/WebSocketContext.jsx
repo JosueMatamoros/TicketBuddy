@@ -18,21 +18,28 @@ export const WebSocketProvider = ({ children }) => {
       try {
         const jsonData = JSON.parse(data);
         if (Array.isArray(jsonData)) {
-          // Asumimos que es el estado de los asientos
+          // Asumimos que es el estado de los asientos.
           setSeatStates(jsonData);
         }
       } catch (e) {
         if (data.startsWith('Sugerencia')) {
-          // Recibimos las sugerencias
           const suggestionsArray = data.split('|');
           setSuggestions(suggestionsArray);
           setServerMessage('');
-        } else if (data === 'Reserva confirmada' || data === 'Reserva rechazada') {
-          // Recibimos la confirmación o rechazo
+        } else if (
+          data === 'Sugerencia aceptada' ||
+          data === 'Sugerencias rechazadas'
+        ) {
+          // Recibimos la confirmación o rechazo.
           setServerMessage(data);
-          setSuggestions([]); // Limpiamos las sugerencias
+          setSuggestions([]); // Limpiamos las sugerencias.
+        } else if (data === 'No hay suficientes asientos disponibles en la categoría solicitada') {
+          // No hay suficientes asientos.
+          alert('No hay suficientes asientos disponibles en la categoría solicitada.');
+          setSuggestions([]);
+          setServerMessage('');
         } else {
-          // Otros mensajes
+          // Otros mensajes.
           setServerMessage(data);
         }
       }
@@ -49,8 +56,12 @@ export const WebSocketProvider = ({ children }) => {
     return () => WebSocketInstance.disconnect();
   }, []);
 
-  const sendSeatRequest = (seatCount) => {
-    WebSocketInstance.sendMessage(seatCount.toString());
+  const sendSeatRequest = (seatCount, selectedCategory) => {
+    const seatRequest = {
+      category: selectedCategory,
+      seat_count: parseInt(seatCount),
+    };
+    WebSocketInstance.sendMessage(JSON.stringify(seatRequest));
   };
 
   const sendChoice = (choice) => {

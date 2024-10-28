@@ -1,4 +1,4 @@
-// pages/Home.jsx
+// src/pages/Home.jsx
 
 import React from 'react';
 import SeatReservationForm from '../components/SeatReservationForm';
@@ -11,24 +11,37 @@ class HomeContent extends React.Component {
     super(props);
     this.state = {
       seatCount: 1,
+      selectedCategory: '',
       suggestedSeats: [],
       selectedSuggestionIndex: null,
     };
     this.handleSeatRequest = this.handleSeatRequest.bind(this);
     this.setSeatCount = this.setSeatCount.bind(this);
+    this.setSelectedCategory = this.setSelectedCategory.bind(this);
     this.handleSuggestionSelect = this.handleSuggestionSelect.bind(this);
     this.handleAcceptSuggestion = this.handleAcceptSuggestion.bind(this);
     this.handleRejectSuggestion = this.handleRejectSuggestion.bind(this);
   }
 
-  handleSeatRequest() {
-    const { sendSeatRequest } = this.props;
-    const { seatCount } = this.state;
-    sendSeatRequest(seatCount);
-  }
-
   setSeatCount(value) {
     this.setState({ seatCount: value });
+  }
+
+  setSelectedCategory(value) {
+    this.setState({ selectedCategory: value });
+  }
+
+  handleSeatRequest() {
+    const { sendSeatRequest } = this.props;
+    const { seatCount, selectedCategory } = this.state;
+
+    if (!selectedCategory) {
+      alert('Por favor, seleccione una categoría.');
+      return;
+    }
+
+    // Enviar la solicitud al servidor con la categoría y el número de asientos
+    sendSeatRequest(seatCount, selectedCategory);
   }
 
   // Método para manejar la selección de una sugerencia
@@ -84,7 +97,7 @@ class HomeContent extends React.Component {
 
   render() {
     const { connected, suggestions, serverMessage, seatStates } = this.props;
-    const { seatCount, suggestedSeats, selectedSuggestionIndex } = this.state;
+    const { seatCount, selectedCategory, suggestedSeats, selectedSuggestionIndex } = this.state;
 
     // Procesar seatStates para que coincidan con los tipos de datos esperados
     const processedSeatStates = seatStates.map((seat) => ({
@@ -106,6 +119,8 @@ class HomeContent extends React.Component {
         <SeatReservationForm
           seatCount={seatCount}
           setSeatCount={this.setSeatCount}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={this.setSelectedCategory}
           handleSeatRequest={this.handleSeatRequest}
           connected={connected}
         />

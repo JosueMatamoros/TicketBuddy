@@ -105,6 +105,8 @@ pub fn mark_predefined_seats_as_booked(seats: Arc<Mutex<HashMap<(Section, u32, u
         ("F", 4, 6),
         ("F", 4, 7),
         ("F", 4, 8),
+        ("C1", 2, 2),
+        ("C1", 2, 4)
     ];
 
     for (section, row, number) in predefined_seats {

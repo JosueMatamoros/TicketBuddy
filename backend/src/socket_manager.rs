@@ -1,8 +1,8 @@
 // socket_manager.rs
 
-use crate::seat_manager::{find_seats_suggestions_by_category, get_seat_states, mark_seat_as, Seat, SeatState, Category, Section};
+use crate::seat_manager::{find_seats_suggestions_by_category, get_seat_states, mark_seat_as, Seat, Category, Section};
 use futures_util::{SinkExt, StreamExt};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize};
 use serde_json;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -50,10 +50,16 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                         println!("Solicitud recibida: {}", request_str);
 
                         // Parsear el mensaje del cliente
-                        let seat_request: SeatRequest = serde_json::from_str(&request_str).unwrap_or(SeatRequest {
-                            category: Category::Economy,
-                            seat_count: 1,
-                        });
+                        let seat_request: SeatRequest = match serde_json::from_str(&request_str) {
+                            Ok(request) => request,
+                            Err(e) => {
+                                eprintln!("Error al deserializar SeatRequest: {}", e);
+                                SeatRequest {
+                                    category: Category::Economy,
+                                    seat_count: 1,
+                                }
+                            }
+                        };
 
                         // Obtener las sugerencias de asientos
                         let seat_suggestions = find_seats_suggestions_by_category(
@@ -61,6 +67,8 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                             seat_request.category,
                             seats.clone(),
                         );
+
+                        println!("Sugerencias encontradas: {:?}", seat_suggestions);
 
                         // Marcar los asientos sugeridos como reservados temporalmente ('R')
                         for suggestion in &seat_suggestions {
@@ -78,14 +86,18 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                             format!("Sugerencia {}: {}", index + 1, seats_str)
                         }).collect();
 
+                        println!("Sugerencias formateadas: {:?}", formatted_suggestions);
+
                         // Enviar las sugerencias al cliente
                         if !formatted_suggestions.is_empty() {
+                            println!("Enviando sugerencias al cliente...");
                             if ws_sender.send(TungsteniteMessage::Text(formatted_suggestions.join("|"))).await.is_err() {
                                 eprintln!("Error al enviar las sugerencias al cliente");
                             }
                         } else {
                             // No hay sugerencias disponibles
-                            if ws_sender.send(TungsteniteMessage::Text("No hay sugerencias disponibles".to_string())).await.is_err() {
+                            println!("No hay suficientes asientos disponibles en la categoría solicitada");
+                            if ws_sender.send(TungsteniteMessage::Text("No hay suficientes asientos disponibles en la categoría solicitada".to_string())).await.is_err() {
                                 eprintln!("Error al enviar el mensaje al cliente");
                             }
                         }
