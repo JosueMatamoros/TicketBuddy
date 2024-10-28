@@ -36,8 +36,6 @@ pub enum Section {
     D,
     E,
     F,
-    G,
-    H,
 }
 
 /// Implementación de métodos para la enumeración Section.
@@ -57,8 +55,6 @@ impl Section {
             Section::D,
             Section::E,
             Section::F,
-            Section::G,
-            Section::H,
         ]
     }
 }
@@ -71,7 +67,7 @@ pub fn create_seats() -> Arc<Mutex<HashMap<(Section, u32, u32), Seat>>> {
     let sections_abc1 = vec![Section::A1, Section::B1, Section::C1];
     let sections_abc2 = vec![Section::A2, Section::B2, Section::C2];
     let sections_abc3 = vec![Section::A3, Section::B3, Section::C3];
-    let sections_defgh = vec![Section::D, Section::E, Section::F, Section::G, Section::H];
+    let sections_defgh = vec![Section::D, Section::E, Section::F];
 
     add_seats(&mut seats, &sections_abc1, 1..=2, 1..=5, 100.0, 150.0);
     add_seats(&mut seats, &sections_abc2, 1..=4, 1..=6, 90.0, 90.0);

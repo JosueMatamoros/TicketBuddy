@@ -30,7 +30,7 @@ class SeatMap extends React.Component {
       seatMap[sectionKey][rowKey].push(seat);
     });
 
-    // Define the section groups as per your example
+    // Define the section groups 
     const sectionGroups = [
       { name: "Group1", sections: ["D", "E", "F", "G", "H"] },
       { name: "Group2", sections: ["A3", "B3", "C3"] },
@@ -42,7 +42,7 @@ class SeatMap extends React.Component {
       <div className="mt-4">
         <h2 className="text-2xl font-bold mb-2">Estado de los Asientos:</h2>
 
-        <div className="w-full max-w-4xl p-4 rounded-lg shadow-lg">
+        <div className="w-full max-w-4xl p-4 ">
           {sectionGroups.map((group, groupIndex) => (
             <div
               key={groupIndex}
@@ -91,6 +91,7 @@ class SeatMap extends React.Component {
               <div className="w-3 h-3 bg-yellow-500 mr-2"></div>
               <span className="text-sm">Reservado Temporalmente</span>
             </div>
+            
           </div>
         </div>
       </div>

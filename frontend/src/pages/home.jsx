@@ -3,6 +3,7 @@
 import React from 'react';
 import SeatReservationForm from '../components/SeatReservationForm';
 import SeatMap from '../components/SeatMap';
+import SeatSuggestionList from '../components/SeatSuggestionList';
 import { WebSocketProvider, useWebSocket } from '../contexts/WebSocketContext';
 
 class HomeContent extends React.Component {
@@ -10,9 +11,14 @@ class HomeContent extends React.Component {
     super(props);
     this.state = {
       seatCount: 1,
+      suggestedSeats: [], // State to hold suggested seats
+      selectedSuggestionIndex: null, // To track the selected suggestion
     };
     this.handleSeatRequest = this.handleSeatRequest.bind(this);
     this.setSeatCount = this.setSeatCount.bind(this);
+    this.handleSuggestionSelect = this.handleSuggestionSelect.bind(this);
+    this.handleAcceptSuggestion = this.handleAcceptSuggestion.bind(this);
+    this.handleRejectSuggestion = this.handleRejectSuggestion.bind(this);
   }
 
   handleSeatRequest() {
@@ -25,23 +31,97 @@ class HomeContent extends React.Component {
     this.setState({ seatCount: value });
   }
 
+  // Method to handle suggestion selection
+  handleSuggestionSelect(index) {
+    const { suggestions } = this.props;
+    // Parse the suggestion string to extract seat details
+    const suggestionString = suggestions[index];
+    const seats = this.parseSuggestionString(suggestionString);
+    this.setState({
+      suggestedSeats: seats,
+      selectedSuggestionIndex: index,
+    });
+  }
+
+  // Method to parse the suggestion string
+  parseSuggestionString(suggestionString) {
+    // Extract the part after ': '
+    const seatsPart = suggestionString.split(': ')[1];
+    const seatStrings = seatsPart.split(', ');
+    const seats = seatStrings
+      .map((seatStr) => {
+        // Remove quotes
+        seatStr = seatStr.replace(/"/g, '').replace(/'/g, '');
+        // Extract section, row, and number
+        const regex = /(.+?)-Fila(\d+)-Asiento(\d+)/;
+        const match = seatStr.match(regex);
+        if (match) {
+          const [, section, row, number] = match;
+          return {
+            section,
+            row: row.toString(),
+            number: parseInt(number, 10),
+          };
+        } else {
+          return null;
+        }
+      })
+      .filter((seat) => seat !== null);
+    return seats;
+  }
+
+  handleAcceptSuggestion() {
+    const { sendChoice } = this.props;
+    const { selectedSuggestionIndex } = this.state;
+    if (selectedSuggestionIndex !== null) {
+      sendChoice(selectedSuggestionIndex + 1); // Send the selected suggestion index (1-based)
+      // Optionally clear suggestedSeats after accepting
+      // this.setState({ suggestedSeats: [], selectedSuggestionIndex: null });
+    }
+  }
+
+  handleRejectSuggestion() {
+    const { sendChoice } = this.props;
+    sendChoice(0); // Send '0' to indicate rejection of all suggestions
+    this.setState({ suggestedSeats: [], selectedSuggestionIndex: null });
+  }
+
   render() {
-    const { connected, suggestions, serverMessage, seatStates, sendChoice } = this.props;
-    const { seatCount } = this.state;
+    const { connected, suggestions, serverMessage, seatStates } = this.props;
+    const { seatCount, suggestedSeats, selectedSuggestionIndex } = this.state;
 
     // Process seatStates to match expected data types
     const processedSeatStates = seatStates.map((seat) => ({
       ...seat,
-      row: seat.row.toString(), // Convert row to string if necessary
-      booked: seat.booked, // Keep booked as char ('F', 'B', 'R')
+      row: seat.row.toString(),
+      booked: seat.booked,
     }));
 
+    // Update seatStates to mark suggested seats as 'R' (yellow)
+    const updatedSeatStates = processedSeatStates.map((seat) => {
+      // Check if seat is in suggestedSeats
+      const isSuggested = suggestedSeats.some(
+        (s) =>
+          s.section === seat.section &&
+          s.row === seat.row.toString() &&
+          s.number === seat.number
+      );
+      if (isSuggested) {
+        return {
+          ...seat,
+          booked: 'R', // Mark as 'R' (yellow)
+        };
+      } else {
+        return seat;
+      }
+    });
+
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-4xl font-bold mb-6">Reserva de Asientos</h1>
 
-        {processedSeatStates.length > 0 ? (
-          <SeatMap seatStates={processedSeatStates} />
+        {updatedSeatStates.length > 0 ? (
+          <SeatMap seatStates={updatedSeatStates} />
         ) : (
           <p>Cargando estado de los asientos...</p>
         )}
@@ -53,7 +133,23 @@ class HomeContent extends React.Component {
           connected={connected}
         />
 
-        {/* Other components like SeatSuggestionList and serverMessage handling */}
+        {/* Render SeatSuggestionList if there are suggestions */}
+        {suggestions.length > 0 && (
+          <SeatSuggestionList
+            suggestions={suggestions}
+            onSelectSuggestion={this.handleSuggestionSelect}
+            selectedSuggestionIndex={selectedSuggestionIndex}
+            onAccept={this.handleAcceptSuggestion}
+            onReject={this.handleRejectSuggestion}
+          />
+        )}
+
+        {/* Display serverMessage if it exists */}
+        {serverMessage && (
+          <div className="mt-4">
+            <h2 className="text-2xl font-bold mb-2">{serverMessage}</h2>
+          </div>
+        )}
       </div>
     );
   }
