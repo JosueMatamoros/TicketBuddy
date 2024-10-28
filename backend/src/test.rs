@@ -2,7 +2,6 @@
 use crate::seat_manager::{mark_seat_as, Seat, Section};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tokio::time::{sleep, Duration};
 
 /// Mark burned seats as booked
 pub fn mark_predefined_seats_as_booked(seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>) {
