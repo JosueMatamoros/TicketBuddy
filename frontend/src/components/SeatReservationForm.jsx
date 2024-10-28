@@ -1,4 +1,4 @@
-// src/components/SeatReservationForm.jsx
+// components/SeatReservationForm.jsx
 
 import React from 'react';
 import { Button } from '@material-tailwind/react';
