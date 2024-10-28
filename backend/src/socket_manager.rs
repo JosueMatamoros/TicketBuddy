@@ -1,10 +1,20 @@
-use crate::seat_manager::{find_seats_suggestions, get_seat_states, mark_seat_as, Seat, Section};
+// socket_manager.rs
+
+use crate::seat_manager::{find_seats_suggestions_by_category, get_seat_states, mark_seat_as, Seat, SeatState, Category, Section};
 use futures_util::{SinkExt, StreamExt};
+use serde::{Serialize, Deserialize};
+use serde_json;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tungstenite::protocol::Message as TungsteniteMessage;
+
+#[derive(Debug, Deserialize)]
+struct SeatRequest {
+    category: Category,
+    seat_count: u32,
+}
 
 pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), Seat>>>) {
     let addr = "127.0.0.1:8080";
@@ -35,15 +45,29 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                         eprintln!("Error al enviar el estado de los asientos al cliente");
                     }
 
-                    // Esperar a que el cliente envíe el número de asientos
-                    if let Some(Ok(TungsteniteMessage::Text(seat_count_str))) = ws_receiver.next().await {
-                        println!("Número de asientos recibido: {}", seat_count_str);
+                    // Esperar a que el cliente envíe la categoría y el número de asientos
+                    if let Some(Ok(TungsteniteMessage::Text(request_str))) = ws_receiver.next().await {
+                        println!("Solicitud recibida: {}", request_str);
 
-                        // Parsear el número de asientos
-                        let seat_count: u32 = seat_count_str.trim().parse().unwrap_or(1);
+                        // Parsear el mensaje del cliente
+                        let seat_request: SeatRequest = serde_json::from_str(&request_str).unwrap_or(SeatRequest {
+                            category: Category::Economy,
+                            seat_count: 1,
+                        });
 
                         // Obtener las sugerencias de asientos
-                        let seat_suggestions = find_seats_suggestions(seat_count, seats.clone());
+                        let seat_suggestions = find_seats_suggestions_by_category(
+                            seat_request.seat_count,
+                            seat_request.category,
+                            seats.clone(),
+                        );
+
+                        // Marcar los asientos sugeridos como reservados temporalmente ('R')
+                        for suggestion in &seat_suggestions {
+                            for &(section, row, number) in suggestion {
+                                mark_seat_as('R', seats.clone(), section, row, number);
+                            }
+                        }
 
                         // Formatear las sugerencias para enviarlas al cliente
                         let formatted_suggestions: Vec<String> = seat_suggestions.iter().enumerate().map(|(index, seats)| {
@@ -55,8 +79,15 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                         }).collect();
 
                         // Enviar las sugerencias al cliente
-                        if ws_sender.send(TungsteniteMessage::Text(formatted_suggestions.join("|"))).await.is_err() {
-                            eprintln!("Error al enviar las sugerencias al cliente");
+                        if !formatted_suggestions.is_empty() {
+                            if ws_sender.send(TungsteniteMessage::Text(formatted_suggestions.join("|"))).await.is_err() {
+                                eprintln!("Error al enviar las sugerencias al cliente");
+                            }
+                        } else {
+                            // No hay sugerencias disponibles
+                            if ws_sender.send(TungsteniteMessage::Text("No hay sugerencias disponibles".to_string())).await.is_err() {
+                                eprintln!("Error al enviar el mensaje al cliente");
+                            }
                         }
 
                         // Manejar la confirmación o rechazo de las sugerencias por parte del cliente
@@ -70,12 +101,8 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
                                 // El cliente ha aceptado una de las sugerencias
                                 let accepted_seats = &seat_suggestions[choice - 1];
 
-                                // Marcar los asientos aceptados como reservados ('B')
-                                for &(section, row, number) in accepted_seats {
-                                    mark_seat_as('B', seats.clone(), section, row, number);
-                                }
-
-                                // Marcar los asientos de las otras sugerencias como disponibles ('F')
+                                // Los asientos aceptados permanecen como 'R' (reservado temporalmente)
+                                // Los asientos de las otras sugerencias se marcan como 'F' (disponible)
                                 for (i, suggestion) in seat_suggestions.iter().enumerate() {
                                     if i != (choice - 1) {
                                         for &(section, row, number) in suggestion {
@@ -86,12 +113,12 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
 
                                 println!("El cliente ha aceptado la sugerencia {}", choice);
                                 // Enviar confirmación al cliente
-                                if ws_sender.send(TungsteniteMessage::Text("Reserva confirmada".to_string())).await.is_err() {
+                                if ws_sender.send(TungsteniteMessage::Text("Sugerencia aceptada".to_string())).await.is_err() {
                                     eprintln!("Error al enviar la confirmación al cliente");
                                 }
                             } else {
                                 // El cliente ha rechazado todas las sugerencias
-                                // Marcar todos los asientos como disponibles ('F')
+                                // Marcar todos los asientos sugeridos como disponibles ('F')
                                 for suggestion in seat_suggestions {
                                     for &(section, row, number) in &suggestion {
                                         mark_seat_as('F', seats.clone(), section, row, number);
@@ -100,7 +127,7 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
 
                                 println!("El cliente ha rechazado todas las sugerencias");
                                 // Enviar notificación al cliente
-                                if ws_sender.send(TungsteniteMessage::Text("Reserva rechazada".to_string())).await.is_err() {
+                                if ws_sender.send(TungsteniteMessage::Text("Sugerencias rechazadas".to_string())).await.is_err() {
                                     eprintln!("Error al enviar la notificación al cliente");
                                 }
                             }
