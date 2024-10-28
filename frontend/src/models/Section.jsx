@@ -2,22 +2,33 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import Row from './Row';
+import Seat from './Seat';
 
 /**
  * Section Class Component
  *
- * Represents a section containing multiple rows.
- * Demonstrates composition and encapsulation.
+ * Representa una sección que contiene filas de asientos.
  */
 class Section extends React.Component {
   render() {
-    const { name, rows } = this.props;
+    const { name, rows, suggestedSeats } = this.props;
+
     return (
-      <div className="m-1 p-2 border rounded">
-        <div className="font-bold text-center text-xs mb-1">{name}</div>
-        {rows.map((seats, index) => (
-          <Row key={index} seats={seats} />
+      <div className="flex flex-col items-center mx-2">
+        <h3 className="text-lg font-bold mb-2">{name}</h3>
+        {rows.map((row, rowIndex) => (
+          <div key={rowIndex} className="flex">
+            {row.map((seat) => (
+              <Seat
+                key={`${seat.section}-${seat.row}-${seat.number}`}
+                number={seat.number}
+                booked={seat.booked}
+                section={seat.section}
+                row={seat.row}
+                suggestedSeats={suggestedSeats}
+              />
+            ))}
+          </div>
         ))}
       </div>
     );
@@ -27,6 +38,13 @@ class Section extends React.Component {
 Section.propTypes = {
   name: PropTypes.string.isRequired,
   rows: PropTypes.arrayOf(PropTypes.array).isRequired,
+  suggestedSeats: PropTypes.arrayOf(
+    PropTypes.shape({
+      section: PropTypes.string.isRequired,
+      row: PropTypes.string.isRequired,
+      number: PropTypes.number.isRequired,
+    })
+  ),
 };
 
 export default Section;

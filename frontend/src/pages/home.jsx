@@ -3,7 +3,7 @@
 import React from 'react';
 import SeatReservationForm from '../components/SeatReservationForm';
 import SeatMap from '../components/SeatMap';
-import SeatSuggestionList from '../components/SeatSuggestionList';
+import SeatSuggestionList from '../components/SeatSuggestions';
 import { WebSocketProvider, useWebSocket } from '../contexts/WebSocketContext';
 
 class HomeContent extends React.Component {
@@ -11,8 +11,8 @@ class HomeContent extends React.Component {
     super(props);
     this.state = {
       seatCount: 1,
-      suggestedSeats: [], // State to hold suggested seats
-      selectedSuggestionIndex: null, // To track the selected suggestion
+      suggestedSeats: [],
+      selectedSuggestionIndex: null,
     };
     this.handleSeatRequest = this.handleSeatRequest.bind(this);
     this.setSeatCount = this.setSeatCount.bind(this);
@@ -31,10 +31,9 @@ class HomeContent extends React.Component {
     this.setState({ seatCount: value });
   }
 
-  // Method to handle suggestion selection
+  // Método para manejar la selección de una sugerencia
   handleSuggestionSelect(index) {
     const { suggestions } = this.props;
-    // Parse the suggestion string to extract seat details
     const suggestionString = suggestions[index];
     const seats = this.parseSuggestionString(suggestionString);
     this.setState({
@@ -43,16 +42,13 @@ class HomeContent extends React.Component {
     });
   }
 
-  // Method to parse the suggestion string
+  // Método para analizar la cadena de sugerencia y extraer los detalles de los asientos
   parseSuggestionString(suggestionString) {
-    // Extract the part after ': '
     const seatsPart = suggestionString.split(': ')[1];
     const seatStrings = seatsPart.split(', ');
     const seats = seatStrings
       .map((seatStr) => {
-        // Remove quotes
         seatStr = seatStr.replace(/"/g, '').replace(/'/g, '');
-        // Extract section, row, and number
         const regex = /(.+?)-Fila(\d+)-Asiento(\d+)/;
         const match = seatStr.match(regex);
         if (match) {
@@ -74,15 +70,15 @@ class HomeContent extends React.Component {
     const { sendChoice } = this.props;
     const { selectedSuggestionIndex } = this.state;
     if (selectedSuggestionIndex !== null) {
-      sendChoice(selectedSuggestionIndex + 1); // Send the selected suggestion index (1-based)
-      // Optionally clear suggestedSeats after accepting
+      sendChoice(selectedSuggestionIndex + 1); // Enviar el índice de la sugerencia seleccionada (basado en 1)
+      // Opcionalmente, limpiar suggestedSeats después de aceptar
       // this.setState({ suggestedSeats: [], selectedSuggestionIndex: null });
     }
   }
 
   handleRejectSuggestion() {
     const { sendChoice } = this.props;
-    sendChoice(0); // Send '0' to indicate rejection of all suggestions
+    sendChoice(0); // Enviar '0' para indicar rechazo de todas las sugerencias
     this.setState({ suggestedSeats: [], selectedSuggestionIndex: null });
   }
 
@@ -90,38 +86,19 @@ class HomeContent extends React.Component {
     const { connected, suggestions, serverMessage, seatStates } = this.props;
     const { seatCount, suggestedSeats, selectedSuggestionIndex } = this.state;
 
-    // Process seatStates to match expected data types
+    // Procesar seatStates para que coincidan con los tipos de datos esperados
     const processedSeatStates = seatStates.map((seat) => ({
       ...seat,
       row: seat.row.toString(),
       booked: seat.booked,
     }));
 
-    // Update seatStates to mark suggested seats as 'R' (yellow)
-    const updatedSeatStates = processedSeatStates.map((seat) => {
-      // Check if seat is in suggestedSeats
-      const isSuggested = suggestedSeats.some(
-        (s) =>
-          s.section === seat.section &&
-          s.row === seat.row.toString() &&
-          s.number === seat.number
-      );
-      if (isSuggested) {
-        return {
-          ...seat,
-          booked: 'R', // Mark as 'R' (yellow)
-        };
-      } else {
-        return seat;
-      }
-    });
-
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-4xl font-bold mb-6">Reserva de Asientos</h1>
 
-        {updatedSeatStates.length > 0 ? (
-          <SeatMap seatStates={updatedSeatStates} />
+        {processedSeatStates.length > 0 ? (
+          <SeatMap seatStates={processedSeatStates} suggestedSeats={suggestedSeats} />
         ) : (
           <p>Cargando estado de los asientos...</p>
         )}
@@ -133,7 +110,7 @@ class HomeContent extends React.Component {
           connected={connected}
         />
 
-        {/* Render SeatSuggestionList if there are suggestions */}
+        {/* Renderizar SeatSuggestionList si hay sugerencias */}
         {suggestions.length > 0 && (
           <SeatSuggestionList
             suggestions={suggestions}
@@ -144,7 +121,7 @@ class HomeContent extends React.Component {
           />
         )}
 
-        {/* Display serverMessage if it exists */}
+        {/* Mostrar serverMessage si existe */}
         {serverMessage && (
           <div className="mt-4">
             <h2 className="text-2xl font-bold mb-2">{serverMessage}</h2>
@@ -155,7 +132,7 @@ class HomeContent extends React.Component {
   }
 }
 
-// Using the WebSocket context
+// Usando el contexto de WebSocket
 const HomeContentWithWebSocket = () => {
   const {
     connected,

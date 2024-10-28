@@ -7,14 +7,13 @@ import Section from "../models/Section";
 /**
  * SeatMap Class Component
  *
- * Represents the entire seat map containing multiple sections arranged in specific groups.
- * Demonstrates the Composite design pattern.
+ * Representa todo el mapa de asientos que contiene múltiples secciones organizadas en grupos específicos.
  */
 class SeatMap extends React.Component {
   render() {
-    const { seatStates } = this.props;
+    const { seatStates, suggestedSeats } = this.props;
 
-    // Group seats by section and row
+    // Agrupar asientos por sección y fila
     const seatMap = {};
 
     seatStates.forEach((seat) => {
@@ -30,7 +29,7 @@ class SeatMap extends React.Component {
       seatMap[sectionKey][rowKey].push(seat);
     });
 
-    // Define the section groups 
+    // Definir los grupos de secciones
     const sectionGroups = [
       { name: "Group1", sections: ["D", "E", "F", "G", "H"] },
       { name: "Group2", sections: ["A3", "B3", "C3"] },
@@ -53,9 +52,9 @@ class SeatMap extends React.Component {
               {group.sections.map((sectionKey) => {
                 const rows = seatMap[sectionKey];
                 if (!rows) {
-                  return null; // If the section doesn't exist, skip rendering
+                  return null; // Si la sección no existe, omitir la renderización
                 }
-                // Sort rows and seats within rows
+                // Ordenar filas y asientos dentro de las filas
                 const sortedRows = Object.keys(rows)
                   .sort((a, b) => a - b)
                   .map((rowKey) =>
@@ -66,18 +65,19 @@ class SeatMap extends React.Component {
                     key={sectionKey}
                     name={sectionKey}
                     rows={sortedRows}
+                    suggestedSeats={suggestedSeats}
                   />
                 );
               })}
             </div>
           ))}
 
-          {/* Escenario (Stage) */}
+          {/* Escenario */}
           <div className="w-full h-8 bg-blue-300 flex items-center justify-center text-white font-bold">
             Escenario
           </div>
 
-          {/* Legend */}
+          {/* Leyenda */}
           <div className="mt-4 flex justify-between">
             <div className="flex items-center">
               <div className="w-3 h-3 bg-red-500 mr-2"></div>
@@ -91,7 +91,10 @@ class SeatMap extends React.Component {
               <div className="w-3 h-3 bg-yellow-500 mr-2"></div>
               <span className="text-sm">Reservado Temporalmente</span>
             </div>
-            
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-blue-500 mr-2"></div>
+              <span className="text-sm">Seleccionados</span>
+            </div>
           </div>
         </div>
       </div>
@@ -108,6 +111,13 @@ SeatMap.propTypes = {
       booked: PropTypes.string.isRequired, // 'F', 'B', 'R'
     })
   ).isRequired,
+  suggestedSeats: PropTypes.arrayOf(
+    PropTypes.shape({
+      section: PropTypes.string.isRequired,
+      row: PropTypes.string.isRequired,
+      number: PropTypes.number.isRequired,
+    })
+  ),
 };
 
 export default SeatMap;

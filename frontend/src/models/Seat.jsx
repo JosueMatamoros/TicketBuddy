@@ -7,25 +7,35 @@ import { Button } from '@material-tailwind/react';
 /**
  * Seat Class Component
  *
- * Represents an individual seat.
- * Demonstrates encapsulation by containing seat properties and rendering logic.
+ * Representa un asiento individual.
  */
 class Seat extends React.Component {
   render() {
-    const { number, booked } = this.props;
+    const { number, booked, section, row, suggestedSeats } = this.props;
 
-    // Determine color based on 'booked' status
-    let color = 'green'; // Free
+    // Verificar si este asiento está en suggestedSeats
+    const isSelected = suggestedSeats && suggestedSeats.some(
+      (seat) =>
+        seat.section === section &&
+        seat.row === row.toString() &&
+        seat.number === number
+    );
+
+    // Determinar el color basado en 'booked' y si está seleccionado
+    let color = 'green'; // Disponible
+
     if (booked === 'B') {
-      color = 'red'; // Booked
+      color = 'red'; // Ocupado
     } else if (booked === 'R') {
-      color = 'yellow'; // Temporarily reserved
+      color = 'yellow'; // Reservado temporalmente
+    } else if (isSelected) {
+      color = 'blue'; // Seleccionado en el front-end
     }
 
     return (
       <Button
         color={color}
-        className="w-4 h-4 m-0.5 text-lg flex items-center justify-center"
+        className="w-4 h-4 m-0.5 text-xs flex items-center justify-center"
         ripple={true}
       >
         {number}
@@ -37,6 +47,15 @@ class Seat extends React.Component {
 Seat.propTypes = {
   number: PropTypes.number.isRequired,
   booked: PropTypes.string.isRequired, // 'F', 'B', 'R'
+  section: PropTypes.string.isRequired,
+  row: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  suggestedSeats: PropTypes.arrayOf(
+    PropTypes.shape({
+      section: PropTypes.string.isRequired,
+      row: PropTypes.string.isRequired,
+      number: PropTypes.number.isRequired,
+    })
+  ),
 };
 
 export default Seat;
