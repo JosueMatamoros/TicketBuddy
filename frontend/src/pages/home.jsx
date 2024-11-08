@@ -3,6 +3,7 @@ import SeatReservationForm from '../components/SeatReservationForm';
 import SeatMap from '../components/SeatMap';
 import SeatSuggestionList from '../components/SeatSuggestions';
 import { WebSocketProvider, useWebSocket } from '../contexts/WebSocketContext';
+import { useNavigate } from 'react-router-dom';
 
 class HomeContent extends React.Component {
   constructor(props) {
@@ -86,7 +87,7 @@ class HomeContent extends React.Component {
     const { selectedSuggestionIndex } = this.state;
     if (selectedSuggestionIndex !== null) {
       sendChoice(selectedSuggestionIndex + 1); // Enviar el índice de la sugerencia seleccionada (basado en 1)
-      // Opcionalmente, puedes restablecer el estado aquí si es necesario
+      this.props.navigate('/payment'); // Navegar a la página de pago
     }
   }
 
@@ -153,6 +154,7 @@ class HomeContent extends React.Component {
 
 // Usando el contexto de WebSocket
 const HomeContentWithWebSocket = () => {
+  const { navigate } = useNavigate();
   const {
     connected,
     suggestions,
@@ -170,6 +172,7 @@ const HomeContentWithWebSocket = () => {
       seatStates={seatStates}
       sendSeatRequest={sendSeatRequest}
       sendChoice={sendChoice}
+      navigate={navigate}
     />
   );
 };
