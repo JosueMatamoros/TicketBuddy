@@ -121,7 +121,7 @@ pub async fn start_socket_server(seats: Arc<Mutex<HashMap<(Section, u32, u32), S
 
                                         // Los asientos aceptados se marcan como 'B' (reservado permanentemente)
                                         for &(section, row, number) in accepted_seats {
-                                            mark_seat_as('B', seats.clone(), section, row, number);
+                                            mark_seat_as('R', seats.clone(), section, row, number);
                                             // Remover los asientos aceptados de client_reserved_seats
                                             client_reserved_seats.retain(|&seat| seat != (section, row, number));
                                         }
