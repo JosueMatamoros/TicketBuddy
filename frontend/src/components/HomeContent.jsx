@@ -50,7 +50,11 @@ class HomeContent extends React.Component {
   handleSuggestionSelect(index) {
     const { suggestions } = this.props;
     const selectedSuggestion = suggestions[index];
-    const seats = selectedSuggestion.seats;
+    const seats = selectedSuggestion.seats.map((seat) => ({
+      ...seat,
+      section: seat.section.toString(),
+      row: seat.row.toString(),
+    }));
     this.setState({
       suggestedSeats: seats,
       selectedSuggestionIndex: index,
@@ -105,6 +109,7 @@ class HomeContent extends React.Component {
 
     const processedSeatStates = seatStates.map((seat) => ({
       ...seat,
+      section: seat.section.toString(),
       row: seat.row.toString(),
       booked: seat.booked,
     }));
