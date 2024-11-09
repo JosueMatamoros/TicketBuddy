@@ -1,4 +1,4 @@
-// components/SeatSuggestionList.jsx
+// src/components/SeatSuggestionList.jsx
 
 import React from 'react';
 import PropTypes from 'prop-types';
@@ -33,7 +33,20 @@ class SeatSuggestionList extends React.Component {
               }`}
               onClick={() => onSelectSuggestion(index)}
             >
-              {suggestion}
+              <div>
+                <strong>Sugerencia {suggestion.suggestion_number}:</strong>
+              </div>
+              <div>
+                {suggestion.seats.map((seat, idx) => (
+                  <span key={idx}>
+                    {seat.section}-Fila{seat.row}-Asiento{seat.number}
+                    {idx < suggestion.seats.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+              </div>
+              <div>
+                <strong>Precio Total:</strong> ${suggestion.total_price.toFixed(2)}
+              </div>
             </li>
           ))}
         </ul>
@@ -55,7 +68,7 @@ class SeatSuggestionList extends React.Component {
 }
 
 SeatSuggestionList.propTypes = {
-  suggestions: PropTypes.arrayOf(PropTypes.string).isRequired,
+  suggestions: PropTypes.array.isRequired,
   onSelectSuggestion: PropTypes.func.isRequired,
   selectedSuggestionIndex: PropTypes.number,
   onAccept: PropTypes.func.isRequired,

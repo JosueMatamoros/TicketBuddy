@@ -1,8 +1,9 @@
 // src/components/HomeContent.jsx
+
 import React from 'react';
 import SeatReservationForm from './SeatReservationForm';
 import SeatMap from './SeatMap';
-import SeatSuggestionList from './SeatSuggestions';
+import SeatSuggestionList from './SeatSuggestions'; // Asegúrate de importar correctamente
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,6 +15,7 @@ class HomeContent extends React.Component {
       selectedCategory: '',
       suggestedSeats: [],
       selectedSuggestionIndex: null,
+      selectedSuggestion: null,
       showForm: true,
     };
     this.handleSeatRequest = this.handleSeatRequest.bind(this);
@@ -47,43 +49,27 @@ class HomeContent extends React.Component {
 
   handleSuggestionSelect(index) {
     const { suggestions } = this.props;
-    const suggestionString = suggestions[index];
-    const seats = this.parseSuggestionString(suggestionString);
+    const selectedSuggestion = suggestions[index];
+    const seats = selectedSuggestion.seats;
     this.setState({
       suggestedSeats: seats,
       selectedSuggestionIndex: index,
+      selectedSuggestion: selectedSuggestion,
     });
-  }
-
-  parseSuggestionString(suggestionString) {
-    const seatsPart = suggestionString.split(': ')[1];
-    const seatStrings = seatsPart.split(', ');
-    const seats = seatStrings
-      .map((seatStr) => {
-        seatStr = seatStr.replace(/"/g, '').replace(/'/g, '');
-        const regex = /(.+?)-Fila(\d+)-Asiento(\d+)/;
-        const match = seatStr.match(regex);
-        if (match) {
-          const [, section, row, number] = match;
-          return {
-            section,
-            row: row.toString(),
-            number: parseInt(number, 10),
-          };
-        } else {
-          return null;
-        }
-      })
-      .filter((seat) => seat !== null);
-    return seats;
   }
 
   handleAcceptSuggestion() {
     const { sendChoice } = this.props;
-    const { selectedSuggestionIndex } = this.state;
+    const { selectedSuggestionIndex, selectedSuggestion } = this.state;
     if (selectedSuggestionIndex !== null) {
       sendChoice(selectedSuggestionIndex + 1);
-      this.props.navigate('/payment');
+      // Navegar a la página de pago pasando el monto y los asientos
+      this.props.navigate('/payment', {
+        state: {
+          amount: selectedSuggestion.total_price,
+          seats: selectedSuggestion.seats,
+        },
+      });
     } else {
       alert('Por favor, seleccione una sugerencia antes de aceptar.');
     }
@@ -92,12 +78,30 @@ class HomeContent extends React.Component {
   handleRejectSuggestion() {
     const { sendChoice } = this.props;
     sendChoice(0);
-    this.setState({ suggestedSeats: [], selectedSuggestionIndex: null, showForm: true });
+    this.setState({
+      suggestedSeats: [],
+      selectedSuggestionIndex: null,
+      selectedSuggestion: null,
+      showForm: true,
+    });
   }
 
   render() {
-    const { connected, suggestions, serverMessage, seatStates, paymentStatus } = this.props;
-    const { seatCount, selectedCategory, suggestedSeats, selectedSuggestionIndex, showForm } = this.state;
+    const {
+      connected,
+      suggestions,
+      serverMessage,
+      seatStates,
+      paymentStatus,
+    } = this.props;
+    const {
+      seatCount,
+      selectedCategory,
+      suggestedSeats,
+      selectedSuggestionIndex,
+      showForm,
+      selectedSuggestion,
+    } = this.state;
 
     const processedSeatStates = seatStates.map((seat) => ({
       ...seat,
@@ -122,12 +126,18 @@ class HomeContent extends React.Component {
         )}
 
         {processedSeatStates.length > 0 ? (
-          <SeatMap seatStates={processedSeatStates} suggestedSeats={suggestedSeats} />
+          <SeatMap
+            seatStates={processedSeatStates}
+            suggestedSeats={
+              paymentStatus === 'success' ? [] : suggestedSeats
+            } // No resaltar asientos después del pago
+          />
         ) : (
           <p>Cargando estado de los asientos...</p>
         )}
 
-        {showForm && (
+        {/* Mostrar solo si el pago no ha sido exitoso */}
+        {paymentStatus !== 'success' && showForm && (
           <SeatReservationForm
             seatCount={seatCount}
             setSeatCount={this.setSeatCount}
@@ -138,7 +148,8 @@ class HomeContent extends React.Component {
           />
         )}
 
-        {suggestions.length > 0 && (
+        {/* Mostrar solo si el pago no ha sido exitoso */}
+        {paymentStatus !== 'success' && suggestions.length > 0 && (
           <SeatSuggestionList
             suggestions={suggestions}
             onSelectSuggestion={this.handleSuggestionSelect}
@@ -146,6 +157,20 @@ class HomeContent extends React.Component {
             onAccept={this.handleAcceptSuggestion}
             onReject={this.handleRejectSuggestion}
           />
+        )}
+
+        {/* Mostrar los asientos reservados después del pago exitoso */}
+        {paymentStatus === 'success' && selectedSuggestion && (
+          <div className="mt-4">
+            <h2 className="text-2xl font-bold mb-2">Asientos Reservados:</h2>
+            <ul>
+              {selectedSuggestion.seats.map((seat, index) => (
+                <li key={index}>
+                  {seat.section}-Fila{seat.row}-Asiento{seat.number}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {serverMessage && (
@@ -168,8 +193,8 @@ const HomeContentWithWebSocket = () => {
     seatStates,
     sendSeatRequest,
     sendChoice,
-    paymentStatus,       
-    setPaymentStatus,    
+    paymentStatus,
+    setPaymentStatus,
   } = useWebSocket();
 
   return (
@@ -181,8 +206,8 @@ const HomeContentWithWebSocket = () => {
       sendSeatRequest={sendSeatRequest}
       sendChoice={sendChoice}
       navigate={navigate}
-      paymentStatus={paymentStatus}       // Pasamos el estado del pago
-      setPaymentStatus={setPaymentStatus} // Pasamos el setter
+      paymentStatus={paymentStatus}
+      setPaymentStatus={setPaymentStatus}
     />
   );
 };

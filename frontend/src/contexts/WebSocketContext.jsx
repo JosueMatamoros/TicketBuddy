@@ -1,4 +1,5 @@
 // src/contexts/WebSocketContext.js
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import WebSocketInstance from '../services/WebSocketService';
 
@@ -9,7 +10,7 @@ export const WebSocketProvider = ({ children }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [serverMessage, setServerMessage] = useState('');
   const [seatStates, setSeatStates] = useState([]);
-  const [paymentStatus, setPaymentStatus] = useState(null); // Añadido
+  const [paymentStatus, setPaymentStatus] = useState(null);
 
   useEffect(() => {
     WebSocketInstance.connect();
@@ -18,23 +19,28 @@ export const WebSocketProvider = ({ children }) => {
       try {
         const jsonData = JSON.parse(data);
         if (Array.isArray(jsonData)) {
-          setSeatStates(jsonData);
+          if (jsonData.length > 0 && jsonData[0].hasOwnProperty('suggestion_number')) {
+            // Es un array de sugerencias con precios
+            setSuggestions(jsonData);
+            setServerMessage('');
+          } else if (jsonData.length > 0 && jsonData[0].hasOwnProperty('section')) {
+            // Es el estado de los asientos
+            setSeatStates(jsonData);
+          }
+        } else if (typeof jsonData === 'object' && jsonData !== null) {
+          // Manejar otros objetos JSON si es necesario
         }
       } catch (e) {
-        if (data.startsWith('Sugerencia')) {
-          const suggestionsArray = data.split('|');
-          setSuggestions(suggestionsArray);
-          setServerMessage('');
-        } else if (
-          data === 'Sugerencia aceptada' ||
-          data === 'Sugerencias rechazadas'
-        ) {
+        // Manejo de otros mensajes
+        if (data === 'Sugerencia aceptada' || data === 'Sugerencias rechazadas') {
           setServerMessage(data);
           setSuggestions([]);
-        } else if (data === 'No hay suficientes asientos disponibles en la categoría solicitada') {
-          alert('No hay suficientes asientos disponibles en la categoría solicitada.');
-          setSuggestions([]);
-          setServerMessage('');
+        } else if (data === 'Pago exitoso') {
+          setServerMessage(data);
+          setPaymentStatus('success');
+        } else if (data === 'Pago fallido. Intente nuevamente.') {
+          setServerMessage(data);
+          setPaymentStatus('failure');
         } else {
           setServerMessage(data);
         }
@@ -64,6 +70,15 @@ export const WebSocketProvider = ({ children }) => {
     WebSocketInstance.sendMessage(choice.toString());
   };
 
+  const sendPaymentResult = (success, seats) => {
+    const message = {
+      type: 'payment_result',
+      success,
+      seats,
+    };
+    WebSocketInstance.sendMessage(JSON.stringify(message));
+  };
+
   return (
     <WebSocketContext.Provider
       value={{
@@ -73,8 +88,9 @@ export const WebSocketProvider = ({ children }) => {
         seatStates,
         sendSeatRequest,
         sendChoice,
-        paymentStatus,       // Añadido
-        setPaymentStatus,    // Añadido
+        paymentStatus,
+        setPaymentStatus,
+        sendPaymentResult,
       }}
     >
       {children}

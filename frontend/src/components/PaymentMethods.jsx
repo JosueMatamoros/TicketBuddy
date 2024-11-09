@@ -1,11 +1,12 @@
 // src/components/PaymentMethods.jsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import Cards from 'react-credit-cards-2';
 import 'react-credit-cards-2/dist/es/styles-compiled.css';
 
-function PaymentMethods({ amount }) {
+function PaymentMethods({ amount, seats }) {
   const [cardDetails, setCardDetails] = useState({
     number: '',
     expiry: '',
@@ -14,7 +15,7 @@ function PaymentMethods({ amount }) {
     focus: '',
   });
 
-  const { setPaymentStatus } = useWebSocket();
+  const { setPaymentStatus, sendPaymentResult } = useWebSocket();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -41,9 +42,13 @@ function PaymentMethods({ amount }) {
       if (isSuccess) {
         setPaymentStatus('success');
         alert('Pago procesado exitosamente.');
+        // Enviar resultado al backend
+        sendPaymentResult(true, seats);
       } else {
         setPaymentStatus('failure');
-        alert('El pago ha fallado.');
+        alert('El pago ha fallado. Por favor, inténtalo de nuevo.');
+        // Enviar resultado al backend
+        sendPaymentResult(false, seats);
       }
 
       navigate('/'); // Regresar a la página principal
