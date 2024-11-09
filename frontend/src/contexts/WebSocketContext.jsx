@@ -1,5 +1,4 @@
 // src/contexts/WebSocketContext.js
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import WebSocketInstance from '../services/WebSocketService';
 
@@ -7,9 +6,10 @@ const WebSocketContext = createContext();
 
 export const WebSocketProvider = ({ children }) => {
   const [connected, setConnected] = useState(false);
-  const [suggestions, setSuggestions] = useState([]); // Almacena las sugerencias de asientos
-  const [serverMessage, setServerMessage] = useState(''); // Almacena mensajes de confirmación o rechazo
-  const [seatStates, setSeatStates] = useState([]); // Almacena el estado de los asientos
+  const [suggestions, setSuggestions] = useState([]);
+  const [serverMessage, setServerMessage] = useState('');
+  const [seatStates, setSeatStates] = useState([]);
+  const [paymentStatus, setPaymentStatus] = useState(null); // Añadido
 
   useEffect(() => {
     WebSocketInstance.connect();
@@ -18,7 +18,6 @@ export const WebSocketProvider = ({ children }) => {
       try {
         const jsonData = JSON.parse(data);
         if (Array.isArray(jsonData)) {
-          // Asumimos que es el estado de los asientos.
           setSeatStates(jsonData);
         }
       } catch (e) {
@@ -30,16 +29,13 @@ export const WebSocketProvider = ({ children }) => {
           data === 'Sugerencia aceptada' ||
           data === 'Sugerencias rechazadas'
         ) {
-          // Recibimos la confirmación o rechazo.
           setServerMessage(data);
-          setSuggestions([]); // Limpiamos las sugerencias.
+          setSuggestions([]);
         } else if (data === 'No hay suficientes asientos disponibles en la categoría solicitada') {
-          // No hay suficientes asientos.
           alert('No hay suficientes asientos disponibles en la categoría solicitada.');
           setSuggestions([]);
           setServerMessage('');
         } else {
-          // Otros mensajes.
           setServerMessage(data);
         }
       }
@@ -77,6 +73,8 @@ export const WebSocketProvider = ({ children }) => {
         seatStates,
         sendSeatRequest,
         sendChoice,
+        paymentStatus,       // Añadido
+        setPaymentStatus,    // Añadido
       }}
     >
       {children}

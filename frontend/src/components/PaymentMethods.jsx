@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+// src/components/PaymentMethods.jsx
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useWebSocket } from '../contexts/WebSocketContext';
 import Cards from 'react-credit-cards-2';
 import 'react-credit-cards-2/dist/es/styles-compiled.css';
 
 function PaymentMethods({ amount }) {
-  const [paymentMethods, setPaymentMethods] = useState([]);
-  const [selectedMethod, setSelectedMethod] = useState(null);
   const [cardDetails, setCardDetails] = useState({
     number: '',
     expiry: '',
@@ -13,18 +14,8 @@ function PaymentMethods({ amount }) {
     focus: '',
   });
 
-  useEffect(() => {
-    const plugins = [];
-    const modules = import.meta.glob('../plugins/*.jsx', { eager: true });
-
-    for (const path in modules) {
-      const PluginClass = modules[path].default;
-      const pluginInstance = new PluginClass();
-      plugins.push(pluginInstance);
-    }
-
-    setPaymentMethods(plugins);
-  }, []);
+  const { setPaymentStatus } = useWebSocket();
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -36,11 +27,6 @@ function PaymentMethods({ amount }) {
   };
 
   const handlePayment = async () => {
-    if (!selectedMethod) {
-      alert('Por favor, selecciona un método de pago.');
-      return;
-    }
-
     const { number, expiry, cvc, name } = cardDetails;
 
     if (!number || !expiry || !cvc || !name) {
@@ -49,37 +35,28 @@ function PaymentMethods({ amount }) {
     }
 
     try {
-      const result = await selectedMethod.processPayment(amount, cardDetails);
-      if (result.success) {
-        alert(`Pago exitoso. ID de transacción: ${result.transactionId}`);
+      // Simular el resultado del pago (50% de probabilidad de éxito)
+      const isSuccess = Math.random() < 0.5;
+
+      if (isSuccess) {
+        setPaymentStatus('success');
+        alert('Pago procesado exitosamente.');
       } else {
-        alert('Error al procesar el pago.');
+        setPaymentStatus('failure');
+        alert('El pago ha fallado.');
       }
+
+      navigate('/'); // Regresar a la página principal
     } catch (error) {
       console.error('Error al procesar el pago:', error);
+      alert('Error al procesar el pago.');
     }
   };
 
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-2xl font-bold mb-4">Métodos de Pago Disponibles</h2>
+      <h2 className="text-2xl font-bold mb-4">Métodos de Pago</h2>
       <p className="mb-6">Monto a pagar: ${amount.toFixed(2)}</p>
-
-      <select
-        className="p-2 border rounded mb-4 w-64"
-        onChange={(e) =>
-          setSelectedMethod(
-            paymentMethods.find((method) => method.name === e.target.value)
-          )
-        }
-      >
-        <option value="">Selecciona un método de pago</option>
-        {paymentMethods.map((method) => (
-          <option key={method.name} value={method.name}>
-            {method.name}
-          </option>
-        ))}
-      </select>
 
       <div className="mb-6">
         <Cards
@@ -95,7 +72,7 @@ function PaymentMethods({ amount }) {
         <input
           type="tel"
           name="number"
-          placeholder="Card Number"
+          placeholder="Número de Tarjeta"
           className="p-2 border rounded w-full"
           value={cardDetails.number}
           onChange={handleInputChange}
@@ -104,7 +81,7 @@ function PaymentMethods({ amount }) {
         <input
           type="text"
           name="name"
-          placeholder="Cardholder Name"
+          placeholder="Nombre del Titular"
           className="p-2 border rounded w-full"
           value={cardDetails.name}
           onChange={handleInputChange}
@@ -113,7 +90,7 @@ function PaymentMethods({ amount }) {
         <input
           type="text"
           name="expiry"
-          placeholder="MM/YY Expiry"
+          placeholder="Fecha de Expiración (MM/AA)"
           className="p-2 border rounded w-full"
           value={cardDetails.expiry}
           onChange={handleInputChange}

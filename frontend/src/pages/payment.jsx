@@ -1,9 +1,9 @@
+// src/pages/Payment.jsx
 import React from 'react';
 import PaymentMethods from '../components/PaymentMethods';
 
 const Payment = () => {
-  // Puedes obtener el monto a pagar de los parámetros de la ruta o usar un valor fijo por ahora
-  const amount = 100.0; // Monto fijo por ahora
+  const amount = 100.0; // Puedes ajustar esto según sea necesario
 
   return (
     <div className="min-h-screen bg-gray-100">
